@@ -1,0 +1,25 @@
+# System
+.DS_Store
+.Trashes
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.env
+venv/
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Editors
+.vscode/
+.idea/
+
+# Output Results (Optional: Don't ignore if you want to commit empty results folder structure)
+# Results/*
+# !Results/.gitkeep
