@@ -61,5 +61,11 @@ Rscript Scripts/R/plot_beta_estimates.R
 Rscript Scripts/R/plot_calibration.R
 ```
 
+## Citation
+
+If you use the code or data in this repository, please cite:
+
+> Nads, A. (2024). *Analysis of Imputation Methods and Missing Indicators for Bayesian Variable Selection in Clinical Data*. [Manuscript submitted for publication].
+
 ## Contact
 Azman Nads (azmannads@msutawi-tawi.edu.ph)
