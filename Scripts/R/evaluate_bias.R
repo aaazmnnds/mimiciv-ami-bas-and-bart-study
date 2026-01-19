@@ -16,7 +16,7 @@ library(dplyr)
 library(ggplot2)
 
 # Load shared configuration
-load("evaluation_config_4VAR.RData")
+load("Data/evaluation_config_4VAR.RData")
 
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
@@ -44,9 +44,9 @@ calculate_bias_all_folds <- function(dataset, mechanism, method, mi_condition) {
   
   # Construct file name
   if (method == "MICE") {
-    file_name <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_beta_estimates.csv")
+    file_name <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_beta_estimates.csv")
   } else {
-    file_name <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_beta_estimates.csv")
+    file_name <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_beta_estimates.csv")
   }
   
   if (!file.exists(file_name)) {
@@ -159,10 +159,10 @@ final_summary <- absolute_summary %>%
 # 3. SAVE OUTPUTS
 # ============================================================================
 
-write.csv(beta_all, "BIAS_DETAILED_all_variables.csv", row.names = FALSE)
-write.csv(final_summary, "BIAS_SUMMARY_by_combination.csv", row.names = FALSE)
+write.csv(beta_all, "Results/BIAS_DETAILED_all_variables.csv", row.names = FALSE)
+write.csv(final_summary, "Results/BIAS_SUMMARY_by_combination.csv", row.names = FALSE)
 write.csv(final_summary %>% select(dataset, mechanism, method, mi_condition, relative_bias_pct, relative_mse_pct),
-          "BIAS_RELATIVE_for_manuscript.csv", row.names = FALSE)
+          "Results/BIAS_RELATIVE_for_manuscript.csv", row.names = FALSE)
 
 cat("Saved: BIAS_DETAILED_all_variables.csv\n")
 cat("Saved: BIAS_SUMMARY_by_combination.csv\n")
@@ -182,7 +182,7 @@ p1 <- ggplot(final_summary, aes(x = method, y = relative_bias_pct, fill = mi_con
   labs(title = "Relative Bias (%) by Method", x = NULL, y = "Relative Bias (%)") +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("BIAS_PLOT_relative_bias.png", p1, width = 10, height = 8)
+ggsave("Results/BIAS_PLOT_relative_bias.png", p1, width = 10, height = 8)
 
 # Plot 2: Relative MSE
 p2 <- ggplot(final_summary, aes(x = method, y = relative_mse_pct, fill = mi_condition)) +
@@ -191,7 +191,7 @@ p2 <- ggplot(final_summary, aes(x = method, y = relative_mse_pct, fill = mi_cond
   labs(title = "Relative MSE (%) by Method", x = NULL, y = "Relative MSE (%)") +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("BIAS_PLOT_relative_mse.png", p2, width = 10, height = 8)
+ggsave("Results/BIAS_PLOT_relative_mse.png", p2, width = 10, height = 8)
 
 cat("Saved plots.\n")
 cat("\nDONE.\n")

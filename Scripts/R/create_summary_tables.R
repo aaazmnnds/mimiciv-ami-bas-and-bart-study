@@ -32,10 +32,10 @@ load_csv <- function(filename) {
   }
 }
 
-bias_data   <- load_csv("BIAS_SUMMARY_by_combination.csv")
-varsel_data <- load_csv("VARIABLE_SELECTION_summary_with_SD.csv")
-type1_data  <- load_csv("TYPE1_ERROR_summary.csv") # Often same as varsel_data
-pred_data   <- load_csv("PREDICTION_PERFORMANCE_metrics.csv")
+bias_data   <- load_csv("Results/BIAS_SUMMARY_by_combination.csv")
+varsel_data <- load_csv("Results/VARIABLE_SELECTION_summary_with_SD.csv")
+type1_data  <- load_csv("Results/TYPE1_ERROR_summary.csv") # Often same as varsel_data
+pred_data   <- load_csv("Results/PREDICTION_PERFORMANCE_metrics.csv")
 
 cat("\n")
 
@@ -104,7 +104,7 @@ table1 <- master %>%
     `Type I Error` = type1_fmt
   )
 
-write.csv(table1, "TABLE1_classification_performance.csv", row.names = FALSE)
+write.csv(table1, "Results/TABLE1_classification_performance.csv", row.names = FALSE)
 
 # ============================================================================
 # 4. GENERATE TABLE 2: BIAS ANALYSIS
@@ -118,7 +118,7 @@ if (!is.null(bias_data)) {
     mutate(across(where(is.numeric), ~ round(., 4))) %>%
     arrange(dataset, mechanism, rmse)
   
-  write.csv(table2, "TABLE2_bias_analysis.csv", row.names = FALSE)
+  write.csv(table2, "Results/TABLE2_bias_analysis.csv", row.names = FALSE)
 }
 
 # ============================================================================
@@ -133,7 +133,7 @@ if (!is.null(pred_data)) {
     mutate(across(where(is.numeric), ~ round(., 4))) %>%
     arrange(dataset, mechanism, desc(auc))
   
-  write.csv(table3, "TABLE3_predictive_performance.csv", row.names = FALSE)
+  write.csv(table3, "Results/TABLE3_predictive_performance.csv", row.names = FALSE)
 }
 
 # ============================================================================
@@ -155,7 +155,7 @@ if ("type1_error_pct_mean" %in% names(master)) {
     mutate(across(where(is.numeric), ~ round(., 2))) %>%
     arrange(dataset, mechanism, type1_error_pct_mean)
   
-  write.csv(table4, "TABLE4_type1_error.csv", row.names = FALSE)
+  write.csv(table4, "Results/TABLE4_type1_error.csv", row.names = FALSE)
 }
 
 # ============================================================================
@@ -195,7 +195,7 @@ for (sheet in names(wb)) {
   setColWidths(wb, sheet, cols = 1:ncol(read.xlsx(wb, sheet = sheet)), widths = "auto")
 }
 
-saveWorkbook(wb, "MASTER_SUMMARY_TABLE.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "Results/MASTER_SUMMARY_TABLE.xlsx", overwrite = TRUE)
 cat("  ✓ Saved MASTER_SUMMARY_TABLE.xlsx\n")
 
 # ============================================================================
@@ -218,7 +218,7 @@ best_performers <- master %>%
     .groups = "drop"
   )
 
-write.csv(best_performers, "BEST_PERFORMERS_summary.csv", row.names = FALSE)
+write.csv(best_performers, "Results/BEST_PERFORMERS_summary.csv", row.names = FALSE)
 cat("  ✓ Saved BEST_PERFORMERS_summary.csv\n")
 
 cat("\nDONE.\n")

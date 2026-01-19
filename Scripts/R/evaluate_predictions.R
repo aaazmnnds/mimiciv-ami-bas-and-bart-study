@@ -16,7 +16,7 @@ library(dplyr)
 library(ggplot2)
 library(pROC)
 
-load("evaluation_config_4VAR.RData")
+load("Data/evaluation_config_4VAR.RData")
 
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
@@ -35,12 +35,12 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
   
   # File Names
   if (method == "MICE") {
-    pred_file <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_predictions.csv")
-    log_file  <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_log_probabilities.csv")
+    pred_file <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_predictions.csv")
+    log_file  <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_log_probabilities.csv")
     pred_col  <- "predicted_prob_pooled"
   } else {
-    pred_file <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_predictions.csv")
-    log_file  <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_log_probabilities.csv")
+    pred_file <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_predictions.csv")
+    log_file  <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_log_probabilities.csv")
     pred_col  <- "predicted_prob"
   }
   
@@ -164,7 +164,7 @@ cat(sprintf("✓ Calculated metrics for %d models.\n\n", nrow(pred_results)))
 # 3. SAVE OUTPUTS
 # ============================================================================
 
-write.csv(pred_results, "PREDICTION_PERFORMANCE_metrics.csv", row.names = FALSE)
+write.csv(pred_results, "Results/PREDICTION_PERFORMANCE_metrics.csv", row.names = FALSE)
 cat("Saved: PREDICTION_PERFORMANCE_metrics.csv\n")
 
 # ============================================================================
@@ -182,7 +182,7 @@ p1 <- ggplot(pred_results, aes(x = method, y = auc, fill = mi_condition)) +
   scale_y_continuous(limits = c(0, 1)) +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("PRED_PLOT_auc.png", p1, width = 10, height = 8)
+ggsave("Results/PRED_PLOT_auc.png", p1, width = 10, height = 8)
 
 # Plot 2: F1 Score
 p2 <- ggplot(pred_results, aes(x = method, y = f1_score, fill = mi_condition)) +
@@ -192,7 +192,7 @@ p2 <- ggplot(pred_results, aes(x = method, y = f1_score, fill = mi_condition)) +
   scale_y_continuous(limits = c(0, 1)) +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("PRED_PLOT_f1.png", p2, width = 10, height = 8)
+ggsave("Results/PRED_PLOT_f1.png", p2, width = 10, height = 8)
 
 cat("Saved plots.\n")
 cat("\nDONE.\n")

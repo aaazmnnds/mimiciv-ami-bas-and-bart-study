@@ -15,7 +15,7 @@
 library(dplyr)
 library(ggplot2)
 
-load("evaluation_config_4VAR.RData")
+load("Data/evaluation_config_4VAR.RData")
 
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
@@ -41,7 +41,7 @@ calculate_selection_all_folds <- function(dataset, mechanism, method, mi_conditi
   
   # Determine Total Variables (P) by reading header of a data file
   # (Only need to do this once per Dataset/Mechanism really, but doing it here is safe)
-  data_file <- paste0("complete_dataset_", dataset, "_", mechanism, ".csv")
+  data_file <- paste0("Data/complete_dataset_", dataset, "_", mechanism, ".csv")
   if (!file.exists(data_file)) {
     # Try alternate naming or skip type 1 error calc
     # Assuming standard names from simulation script
@@ -61,9 +61,9 @@ calculate_selection_all_folds <- function(dataset, mechanism, method, mi_conditi
   
   # File name
   if (method == "MICE") {
-    file_name <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_selected_variables.csv")
+    file_name <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_selected_variables.csv")
   } else {
-    file_name <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_selected_variables.csv")
+    file_name <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_selected_variables.csv")
   }
   
   if (!file.exists(file_name)) return(NULL)
@@ -162,9 +162,9 @@ summary_stats <- fold_data %>%
 # 3. SAVE OUTPUTS
 # ============================================================================
 
-write.csv(fold_data, "VARIABLE_SELECTION_fold_by_fold.csv", row.names = FALSE)
-write.csv(summary_stats, "VARIABLE_SELECTION_summary_with_SD.csv", row.names = FALSE)
-write.csv(summary_stats, "TYPE1_ERROR_summary.csv", row.names = FALSE)
+write.csv(fold_data, "Results/VARIABLE_SELECTION_fold_by_fold.csv", row.names = FALSE)
+write.csv(summary_stats, "Results/VARIABLE_SELECTION_summary_with_SD.csv", row.names = FALSE)
+write.csv(summary_stats, "Results/TYPE1_ERROR_summary.csv", row.names = FALSE)
 
 cat("Saved: VARIABLE_SELECTION_fold_by_fold.csv\n")
 cat("Saved: VARIABLE_SELECTION_summary_with_SD.csv\n")
@@ -185,7 +185,7 @@ p1 <- ggplot(summary_stats, aes(x = method, y = mean_f1, fill = mi_condition)) +
   labs(title = "Variable Selection F1 Score (Mean ± SD)", x = NULL, y = "F1 Score") +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("VARSEL_PLOT_mean_f1.png", p1, width = 10, height = 8)
+ggsave("Results/VARSEL_PLOT_mean_f1.png", p1, width = 10, height = 8)
 
 # Plot 2: Boxplot of Sensitivity Distribution
 # (Shows variability across folds more clearly than just SD)
@@ -195,7 +195,7 @@ p2 <- ggplot(fold_data, aes(x = method, y = sensitivity, fill = mi_condition)) +
   labs(title = "Sensitivity Distribution across 10 Folds", x = NULL, y = "Sensitivity") +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("VARSEL_PLOT_sensitivity_boxplot.png", p2, width = 10, height = 8)
+ggsave("Results/VARSEL_PLOT_sensitivity_boxplot.png", p2, width = 10, height = 8)
 
 cat("Saved plots.\n")
 cat("\nDONE.\n")

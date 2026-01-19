@@ -1,5 +1,9 @@
 # Analysis of Imputation Methods and Missing Indicators for Bayesian Variable Selection in Clinical Data
 
+**Author:** Azman Nads (azmannads@msutawi-tawi.edu.ph)  
+**License:** MIT License  
+**Repository URL:** [https://github.com/aaazmnnds/mimiciv-ami-bas-and-bart-study](https://github.com/aaazmnnds/mimiciv-ami-bas-and-bart-study)
+
 This repository contains the code and data to replicate the findings of the manuscript.
 
 ## Repository Structure
@@ -10,7 +14,7 @@ This repository contains the code and data to replicate the findings of the manu
 *   `Scripts/`:
     *   `R/`: All R scripts for data simulation, imputation, modeling, and evaluation.
     *   `Python/`: Helper scripts for data extraction and additional plotting.
-*   `Results/`: (Empty) Destination folder for generated plots and tables.
+*   `Results/`: Destination folder for generated plots and tables.
 
 ## Requirements
 
@@ -58,4 +62,4 @@ Rscript Scripts/R/plot_calibration.R
 ```
 
 ## Contact
-[Your Name/Email]
+Azman Nads (azmannads@msutawi-tawi.edu.ph)

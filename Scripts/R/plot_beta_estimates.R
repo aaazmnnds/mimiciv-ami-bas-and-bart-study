@@ -13,7 +13,7 @@ library(ggplot2)
 library(gridExtra)
 library(grid)
 
-load("evaluation_config_4VAR.RData")
+load("Data/evaluation_config_4VAR.RData")
 
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
@@ -38,9 +38,9 @@ extract_fold_betas <- function(dataset, mechanism, method, mi_condition) {
   
   # File name
   if (method == "MICE") {
-    file_name <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_beta_estimates.csv")
+    file_name <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_beta_estimates.csv")
   } else {
-    file_name <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_beta_estimates.csv")
+    file_name <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_beta_estimates.csv")
   }
   
   if (!file.exists(file_name)) return(NULL)
@@ -174,7 +174,7 @@ for (ds in DATASETS) {
     right = legend
   )
   
-  ggsave(paste0("BETA_PLOT_", ds, "_wMI_vs_noMI.png"), combined_plot, width = 12, height = 10, bg="white")
+  ggsave(paste0("Results/BETA_PLOT_", ds, "_wMI_vs_noMI.png"), combined_plot, width = 12, height = 10, bg="white")
 }
 
 cat("Saved plots.\n")

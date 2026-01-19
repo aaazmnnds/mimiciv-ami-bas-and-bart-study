@@ -25,15 +25,15 @@ set.seed(123)
 datasets_config <- list(
   MIMIC = list(
     name = "MIMIC-III",
-    original = "cleaned.mi (mimiciii).csv",
-    missforest = "cleaned.mimic_missForest_imputed.csv",
+    original = "Data/cleaned.mi (mimiciii).csv",
+    missforest = "Data/cleaned.mimic_missForest_imputed.csv",
     response = "ICD9_CODE",
     output_prefix = "MIMIC"
   ),
   MI = list(
     name = "Myocardial Infarction",
-    original = "cleaned.mi1 (myocardial infarction).csv",
-    missforest = "cleaned.mi_missForest_imputed.csv",
+    original = "Data/cleaned.mi (myocardial infarction).csv",
+    missforest = "Data/cleaned.mi_missForest_imputed.csv",
     response = "ZSN",
     output_prefix = "MI"
   )
@@ -147,19 +147,40 @@ for(dataset_name in names(datasets_config)) {
   target_prop_ones <- as.numeric(outcome_table["1"]) / sum(outcome_table)
   cat(sprintf("  Target 1s Ratio: %.2f%%\n", target_prop_ones * 100))
   
-  # Load MissForest Data (Base for simulation)
-  if (!file.exists(config$missforest)) {
-      cat(sprintf("Warning: Input file %s not found. Skipping.\n", config$missforest))
-      next
+  # 2. Get Reference Complete Data (Ground Truth)
+  if (file.exists(config$missforest)) {
+      cat(sprintf("  Loading existing ground truth: %s\n", config$missforest))
+      data_mf <- read.csv(config$missforest)
+  } else {
+      cat(sprintf("  Ground truth %s not found. Generating via missForest...\n", config$missforest))
+      
+      # Determine value columns for imputation
+      value_cols_orig <- !grepl("_missing|total_missing", names(data_original)) & names(data_original) != config$response
+      data_for_imp <- data_original[, value_cols_orig]
+      
+      # Handle character columns
+      char_cols <- sapply(data_for_imp, is.character)
+      if (any(char_cols)) {
+        data_for_imp[, char_cols] <- lapply(data_for_imp[, char_cols], as.factor)
+      }
+      
+      # Run missForest
+      mf_result <- missForest(data_for_imp, verbose=FALSE)
+      X_full_imputed <- mf_result$ximp
+      
+      # Reattach response variable
+      data_mf <- cbind(X_full_imputed, data_original[config$response])
+      
+      # Save for future use
+      write.csv(data_mf, config$missforest, row.names = FALSE)
+      cat(sprintf("  Saved generated ground truth to: %s\n", config$missforest))
   }
-  data_mf <- read.csv(config$missforest)
-  
-  # Extract value columns
+
+  # Extract value columns for simulation
   value_cols_mf <- !grepl("_missing|total_missing", names(data_mf)) & names(data_mf) != config$response
   X_full <- as.data.frame(data_mf[, value_cols_mf])
-  original_miss_rate <- 0.1 # Approximate default if unknown, or calculate from original
   
-  # Re-calculate miss rate from original to be precise
+  # Calculate missing rate from original data
   value_cols_orig <- !grepl("_missing|total_missing", names(data_original)) & names(data_original) != config$response
   X_orig_vals <- data_original[, value_cols_orig]
   original_miss_rate <- mean(is.na(X_orig_vals))
@@ -199,7 +220,7 @@ for(dataset_name in names(datasets_config)) {
     complete_data <- create_complete_dataset(X_missing, Y_sim, config$response)
     complete_data <- reorder_with_indicators(complete_data, config$response)
     
-    filename <- paste0("complete_dataset_", config$output_prefix, "_", mech, ".csv")
+    filename <- paste0("Data/complete_dataset_", config$output_prefix, "_", mech, ".csv")
     write.csv(complete_data, filename, row.names = FALSE)
     
     # Save Truth Info
@@ -208,7 +229,7 @@ for(dataset_name in names(datasets_config)) {
         beta_true = selected_betas,
         missingness_rate = miss_rates[top_idx]
     )
-    truth_filename <- paste0(config$output_prefix, "_", mech, "_true_variables.csv")
+    truth_filename <- paste0("Data/", config$output_prefix, "_", mech, "_true_variables.csv")
     write.csv(truth_info, truth_filename, row.names = FALSE)
     
     cat(sprintf("  Saved %s and truth info.\n", filename))

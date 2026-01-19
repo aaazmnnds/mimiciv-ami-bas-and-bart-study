@@ -38,7 +38,7 @@ outcome_ratios <- list(
 # ============================================================================
 
 load_true_variables <- function(dataset, mechanism) {
-  filename <- paste0(dataset, "_", mechanism, "_true_variables.csv")
+  filename <- paste0("Data/", dataset, "_", mechanism, "_true_variables.csv")
   
   if (!file.exists(filename)) {
     warning(paste("File not found:", filename))
@@ -78,7 +78,7 @@ for (ds in datasets) {
 # 3. SAVE CONFIGURATION
 # ============================================================================
 
-save(true_variables, beta_true_values, outcome_ratios, file = "evaluation_config_4VAR.RData")
+save(true_variables, beta_true_values, outcome_ratios, file = "Data/evaluation_config_4VAR.RData")
 cat("\nSaved configuration to 'evaluation_config_4VAR.RData'.\n")
 
 # Save detailed CSV summary
@@ -102,5 +102,5 @@ for (key in names(true_variables)) {
   }
 }
 
-write.csv(summary_df, "evaluation_config_summary_4VAR.csv", row.names = FALSE)
+write.csv(summary_df, "Data/evaluation_config_summary_4VAR.csv", row.names = FALSE)
 cat("Saved summary to 'evaluation_config_summary_4VAR.csv'.\n")

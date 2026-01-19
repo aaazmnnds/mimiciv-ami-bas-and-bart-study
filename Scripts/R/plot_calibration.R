@@ -16,7 +16,7 @@ library(dplyr)
 library(ggplot2)
 library(gridExtra)
 
-load("evaluation_config_4VAR.RData")
+load("Data/evaluation_config_4VAR.RData")
 
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
@@ -35,12 +35,12 @@ get_calibration_data <- function(dataset, mechanism, method, mi_condition) {
   
   # File Names (Predictions and LogProbs to find best num_top)
   if (method == "MICE") {
-    pred_file <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_predictions.csv")
-    log_file  <- paste0(dataset, "_", mechanism, "_", mi_condition, "_POOLED_log_probabilities.csv")
+    pred_file <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_predictions.csv")
+    log_file  <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_log_probabilities.csv")
     pred_col  <- "predicted_prob_pooled"
   } else {
-    pred_file <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_predictions.csv")
-    log_file  <- paste0(dataset, "_", mechanism, "_", method, "_", mi_condition, "_log_probabilities.csv")
+    pred_file <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_predictions.csv")
+    log_file  <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_log_probabilities.csv")
     pred_col  <- "predicted_prob"
   }
   
@@ -148,7 +148,7 @@ for (ds in DATASETS) {
       theme_bw() +
       theme(legend.position = "bottom")
     
-    filename <- paste0("CALIBRATION_PLOT_", ds, "_", mic, ".png")
+    filename <- paste0("Results/CALIBRATION_PLOT_", ds, "_", mic, ".png")
     ggsave(filename, p, width = 10, height = 6)
     cat(sprintf("  ✓ Saved: %s\n", filename))
   }
