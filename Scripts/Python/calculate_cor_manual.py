@@ -3,7 +3,7 @@ import math
 import os
 
 # Define paths
-data_dir = "Data"
+data_dir = "../../Data"
 output_dir = "."
 
 mimic_path = os.path.join(data_dir, "mimic_septic_shock_tabular.csv")

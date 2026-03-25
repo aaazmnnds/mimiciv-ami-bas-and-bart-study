@@ -1,9 +1,9 @@
 # Calculate missingness percentage for each variable in MIMIC-III and AMI datasets
 # For Reviewer 3 Major Comment 3
 
-# Define relative paths (assuming script runs from Replication_Package/)
-mimic_path <- "Data/mimic_septic_shock_tabular.csv"
-ami_path <- "Data/cleaned.mi (myocardial infarction).csv"
+# Define relative paths (assuming script runs from Scripts/R/)
+mimic_path <- "../../Data/mimic_septic_shock_tabular.csv"
+ami_path <- "../../Data/cleaned.mi (myocardial infarction).csv"
 
 # Function to calculate missingness
 calculate_missing_pct <- function(path, name) {

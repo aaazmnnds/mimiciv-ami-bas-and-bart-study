@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import os
 
 # Define paths
-base_dir = "."
+# Define paths
+base_dir = "../.."
 data_dir = os.path.join(base_dir, "Data")
 output_dir = base_dir
 

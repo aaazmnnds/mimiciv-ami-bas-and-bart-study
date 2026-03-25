@@ -1,9 +1,9 @@
 # Calculate correlation matrices for MIMIC-III and AMI predictors
 # For Reviewer 3 Major Comment 1
 
-# Define relative paths
-mimic_path <- "Data/mimic_septic_shock_tabular.csv"
-ami_path <- "Data/cleaned.mi (myocardial infarction).csv"
+# Define relative paths (assuming script runs from Scripts/R/)
+mimic_path <- "../../Data/mimic_septic_shock_tabular.csv"
+ami_path <- "../../Data/cleaned.mi (myocardial infarction).csv"
 
 # Function to calculate and save correlation matrix
 generate_correlation_report <- function(path, name, output_csv) {

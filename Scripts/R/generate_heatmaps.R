@@ -28,11 +28,11 @@ generate_heatmap <- function(file_path, output_name, title) {
 }
 
 # Generate MIMIC-III heatmap
-generate_heatmap("Data/cleaned.mi (mimiciii).csv", 
+generate_heatmap("../../Data/cleaned.mi (mimiciii).csv", 
                  "mimic_correlation_heatmap.png", 
                  "MIMIC-III Predictor Correlations")
 
 # Generate AMI heatmap
-generate_heatmap("Data/cleaned.mi (myocardial infarction).csv", 
+generate_heatmap("../../Data/cleaned.mi (myocardial infarction).csv", 
                  "ami_correlation_heatmap.png", 
                  "AMI Predictor Correlations")
