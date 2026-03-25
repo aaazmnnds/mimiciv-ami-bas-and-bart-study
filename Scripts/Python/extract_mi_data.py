@@ -52,7 +52,7 @@ def fetch_and_process_mi_data():
     print("\nTarget Variables:")
     print(y.columns.tolist())
 
-    # NOTE: The original notebook contained a local PostgreSQL connection block 
+    # NOTE: The original notebook contained a local PostgreSQL connection block
     # with hardcoded credentials. This has been removed for security and portability.
     # If database connectivity is required, please configure environment variables:
     # DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT

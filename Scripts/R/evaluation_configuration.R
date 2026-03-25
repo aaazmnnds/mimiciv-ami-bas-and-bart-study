@@ -1,4 +1,3 @@
-################################################################################
 # EVALUATION CONFIGURATION
 #
 # Logic:
@@ -6,13 +5,10 @@
 # 2. Define outcome ratios for reference.
 # 3. Save a consolidated RData file for downstream evaluation scripts.
 #
-################################################################################
 
 library(dplyr)
 
-# ============================================================================
 # 1. OUTCOME RATIOS
-# ============================================================================
 
 outcome_ratios <- list(
   MIMIC = list(
@@ -33,9 +29,7 @@ outcome_ratios <- list(
   )
 )
 
-# ============================================================================
 # 2. LOAD TRUE VARIABLES
-# ============================================================================
 
 load_true_variables <- function(dataset, mechanism) {
   filename <- paste0("Data/", dataset, "_", mechanism, "_true_variables.csv")
@@ -74,9 +68,7 @@ for (ds in datasets) {
   }
 }
 
-# ============================================================================
 # 3. SAVE CONFIGURATION
-# ============================================================================
 
 save(true_variables, beta_true_values, outcome_ratios, file = "Data/evaluation_config_4VAR.RData")
 cat("\nSaved configuration to 'evaluation_config_4VAR.RData'.\n")

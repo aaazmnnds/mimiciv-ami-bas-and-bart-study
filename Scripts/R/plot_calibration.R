@@ -1,4 +1,3 @@
-################################################################################
 # PLOT CALIBRATION CURVES
 #
 # Generates calibration plots for the "Best Model" (selected by num_top).
@@ -10,7 +9,6 @@
 # 3. Calculate mean predicted probability and mean observed outcome rate per bin.
 # 4. Plot Calibration Curve (Diagonal = Perfect Calibration).
 #
-################################################################################
 
 library(dplyr)
 library(ggplot2)
@@ -27,9 +25,7 @@ cat("\n", rep("=", 80), "\n", sep = "")
 cat("PLOTTING CALIBRATION CURVES\n")
 cat(rep("=", 80), "\n\n", sep = "")
 
-# ============================================================================
 # FUNCTION: Extract Calibration Data
-# ============================================================================
 
 get_calibration_data <- function(dataset, mechanism, method, mi_condition) {
   
@@ -73,9 +69,7 @@ get_calibration_data <- function(dataset, mechanism, method, mi_condition) {
   return(pred_subset %>% mutate(dataset=dataset, mechanism=mechanism, method=method, mi_condition=mi_condition))
 }
 
-# ============================================================================
 # 1. AGGREGATE CALIBRATION DATA
-# ============================================================================
 
 cat("Extracting prediction data...\n")
 all_preds <- list()
@@ -96,11 +90,9 @@ for (d in DATASETS) {
 }
 
 combined_preds <- bind_rows(all_preds)
-cat(sprintf("✓ Loaded %d prediction records.\n\n", nrow(combined_preds)))
+cat(sprintf(" Loaded %d prediction records.\n\n", nrow(combined_preds)))
 
-# ============================================================================
 # 2. CREATE CALIBRATION BINS
-# ============================================================================
 
 cat("Calculating calibration bins...\n")
 
@@ -115,9 +107,7 @@ calibration_summary <- combined_preds %>%
     .groups = "drop"
   )
 
-# ============================================================================
 # 3. PLOT
-# ============================================================================
 
 cat("Creating plots...\n")
 
@@ -145,12 +135,21 @@ for (ds in DATASETS) {
       ) +
       scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
       scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
-      theme_bw() +
-      theme(legend.position = "bottom")
+      theme_bw(base_size = 18) +
+      theme(
+        legend.position = "bottom",
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        axis.title = element_text(size = 16, face = "bold"),
+        strip.text = element_text(size = 14, face = "bold"),
+        plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+        legend.title = element_text(size = 14, face = "bold"),
+        legend.text = element_text(size = 12)
+      )
     
     filename <- paste0("Results/CALIBRATION_PLOT_", ds, "_", mic, ".png")
     ggsave(filename, p, width = 10, height = 6)
-    cat(sprintf("  ✓ Saved: %s\n", filename))
+    cat(sprintf("   Saved: %s\n", filename))
   }
 }
 

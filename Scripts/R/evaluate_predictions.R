@@ -1,4 +1,3 @@
-################################################################################
 # EVALUATE OVERALL PREDICTION PERFORMANCE
 #
 # Metrics:
@@ -10,7 +9,6 @@
 # - Uses the "best model" size (num_top) selected by highest log-probability.
 # - Evaluates performance on the held-out Test set.
 #
-################################################################################
 
 library(dplyr)
 library(ggplot2)
@@ -27,9 +25,7 @@ cat("\n=========================================================================
 cat("PREDICTION PERFORMANCE EVALUATION\n")
 cat("================================================================================\n\n")
 
-# ============================================================================
 # FUNCTION: Calculate metrics for One Combination
-# ============================================================================
 
 calculate_prediction_metrics <- function(dataset, mechanism, method, mi_condition) {
   
@@ -61,7 +57,7 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
         best_num_top <- log_data$num_top[best_idx]
         best_log_lik <- log_data$avg_log_prob[best_idx]
     } else {
-        # Fallback: assume column with max value in the first row is the best? 
+        # Fallback: assume column with max value in the first row is the best?
         # Or usually there's a structure like 'num_top', 'avg_log_prob'.
         # If simpler structure (rows=num_top), just take row max.
         # Assuming standard structure from our cleaned scripts:
@@ -92,7 +88,7 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
   }
 
   # 2. Filter Predictions for that Best Model Size
-  # The prediction file has predictions for ALL num_top values usually? 
+  # The prediction file has predictions for ALL num_top values usually?
   # Or just the best? Previous scripts saved ALL.
   if ("num_top" %in% names(pred_data)) {
       pred_subset <- pred_data %>% filter(num_top == best_num_top)
@@ -134,9 +130,7 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
   ))
 }
 
-# ============================================================================
 # 1. PROCESS ALL COMBINATIONS
-# ============================================================================
 
 all_res <- list()
 counter <- 1
@@ -158,18 +152,14 @@ for (d in DATASETS) {
 }
 
 pred_results <- bind_rows(all_res)
-cat(sprintf("✓ Calculated metrics for %d models.\n\n", nrow(pred_results)))
+cat(sprintf(" Calculated metrics for %d models.\n\n", nrow(pred_results)))
 
-# ============================================================================
 # 3. SAVE OUTPUTS
-# ============================================================================
 
 write.csv(pred_results, "Results/PREDICTION_PERFORMANCE_metrics.csv", row.names = FALSE)
 cat("Saved: PREDICTION_PERFORMANCE_metrics.csv\n")
 
-# ============================================================================
 # 4. PLOTTING
-# ============================================================================
 
 cat("Generating plots...\n")
 
@@ -180,7 +170,16 @@ p1 <- ggplot(pred_results, aes(x = method, y = auc, fill = mi_condition)) +
   facet_wrap(~ dataset + mechanism) +
   labs(title = "AUC by Method", x = NULL, y = "AUC") +
   scale_y_continuous(limits = c(0, 1)) +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_bw(base_size = 18) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
 
 ggsave("Results/PRED_PLOT_auc.png", p1, width = 10, height = 8)
 
@@ -190,7 +189,16 @@ p2 <- ggplot(pred_results, aes(x = method, y = f1_score, fill = mi_condition)) +
   facet_wrap(~ dataset + mechanism) +
   labs(title = "F1 Score by Method", x = NULL, y = "F1 Score") +
   scale_y_continuous(limits = c(0, 1)) +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_bw(base_size = 18) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
 
 ggsave("Results/PRED_PLOT_f1.png", p2, width = 10, height = 8)
 

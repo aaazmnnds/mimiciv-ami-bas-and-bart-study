@@ -1,4 +1,3 @@
-################################################################################
 # EVALUATE VARIABLE SELECTION (Fold-by-Fold)
 #
 # Metrics:
@@ -10,7 +9,6 @@
 # - Calculates metrics for EACH fold individually.
 # - Reports Mean +/- SD across 10 folds.
 #
-################################################################################
 
 library(dplyr)
 library(ggplot2)
@@ -27,9 +25,7 @@ cat("\n=========================================================================
 cat("VARIABLE SELECTION EVALUATION (Fold-by-Fold)\n")
 cat("================================================================================\n\n")
 
-# ============================================================================
 # FUNCTION: Calculate Selection Metrics for One Combination
-# ============================================================================
 
 calculate_selection_all_folds <- function(dataset, mechanism, method, mi_condition) {
   
@@ -114,9 +110,7 @@ calculate_selection_all_folds <- function(dataset, mechanism, method, mi_conditi
   return(bind_rows(fold_results))
 }
 
-# ============================================================================
 # 1. PROCESS ALL COMBINATIONS
-# ============================================================================
 
 all_fold_res <- list()
 counter <- 1
@@ -138,11 +132,9 @@ for (d in DATASETS) {
 }
 
 fold_data <- bind_rows(all_fold_res)
-cat(sprintf("✓ Calculated metrics for %d total fold-outcomes.\n\n", nrow(fold_data)))
+cat(sprintf(" Calculated metrics for %d total fold-outcomes.\n\n", nrow(fold_data)))
 
-# ============================================================================
 # 2. SUMMARY STATISTICS (Mean +/- SD)
-# ============================================================================
 
 summary_stats <- fold_data %>%
   group_by(dataset, mechanism, method, mi_condition) %>%
@@ -158,9 +150,7 @@ summary_stats <- fold_data %>%
     .groups = "drop"
   )
 
-# ============================================================================
 # 3. SAVE OUTPUTS
-# ============================================================================
 
 write.csv(fold_data, "Results/VARIABLE_SELECTION_fold_by_fold.csv", row.names = FALSE)
 write.csv(summary_stats, "Results/VARIABLE_SELECTION_summary_with_SD.csv", row.names = FALSE)
@@ -170,9 +160,7 @@ cat("Saved: VARIABLE_SELECTION_fold_by_fold.csv\n")
 cat("Saved: VARIABLE_SELECTION_summary_with_SD.csv\n")
 cat("Saved: TYPE1_ERROR_summary.csv\n")
 
-# ============================================================================
 # 4. PLOTTING
-# ============================================================================
 
 cat("Generating plots...\n")
 
@@ -182,8 +170,17 @@ p1 <- ggplot(summary_stats, aes(x = method, y = mean_f1, fill = mi_condition)) +
   geom_errorbar(aes(ymin = pmax(0, mean_f1 - sd_f1), ymax = pmin(1, mean_f1 + sd_f1)),
                 position = position_dodge(0.9), width = 0.25) +
   facet_wrap(~ dataset + mechanism) +
-  labs(title = "Variable Selection F1 Score (Mean ± SD)", x = NULL, y = "F1 Score") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  labs(title = "Variable Selection F1 Score (Mean  SD)", x = NULL, y = "F1 Score") +
+  theme_bw(base_size = 18) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
 
 ggsave("Results/VARSEL_PLOT_mean_f1.png", p1, width = 10, height = 8)
 
@@ -193,7 +190,16 @@ p2 <- ggplot(fold_data, aes(x = method, y = sensitivity, fill = mi_condition)) +
   geom_boxplot() +
   facet_wrap(~ dataset + mechanism) +
   labs(title = "Sensitivity Distribution across 10 Folds", x = NULL, y = "Sensitivity") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_bw(base_size = 18) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
 
 ggsave("Results/VARSEL_PLOT_sensitivity_boxplot.png", p2, width = 10, height = 8)
 

@@ -5,9 +5,10 @@ import seaborn as sns
 import os
 import glob
 
-# ==============================================================================
 # CONFIGURATION
-# ==============================================================================
+sns.set_context("talk", font_scale=1.2)
+plt.rcParams.update({'font.size': 14, 'axes.titlesize': 16, 'axes.labelsize': 14})
+
 METHODS = ["MICE", "MEAN", "missForest", "KNN"]
 DATASETS = ["MIMIC", "MI"]
 MECHANISMS = ["MCAR", "MAR", "MNAR"]
@@ -115,7 +116,17 @@ def plot_calibration():
 
     # 3. Plotting
     print("Creating plots...")
+    sns.set_context("talk") # This increases base font size significantly
     sns.set_style("whitegrid")
+
+    plt.rcParams.update({
+        'legend.title_fontsize': 'large',
+        'legend.fontsize': 'medium',
+        'axes.labelsize': 'large',
+        'axes.titlesize': 'x-large',
+        'xtick.labelsize': 'medium',
+        'ytick.labelsize': 'medium'
+    })
 
     for ds in DATASETS:
         ds_data = calibration_summary[calibration_summary["dataset"] == ds]
@@ -126,15 +137,7 @@ def plot_calibration():
             if plot_data.empty:
                 continue
 
-            plt.figure(figsize=(12, 6))
-            
-            # Draw diagonal reference line
-            plt.plot([0, 1], [0, 1], ls="--", c="gray", alpha=0.5)
-
-            # Facet grid equivalent using seaborn lineplot or relplot? 
-            # We want facet by mechanism.
-            
-            # Since seaborn facetgrid is robust:
+            # Since seaborn relplot handles its own figure creation:
             g = sns.relplot(
                 data=plot_data,
                 x="mean_predicted",
@@ -144,18 +147,22 @@ def plot_calibration():
                 col="mechanism",
                 kind="line",
                 markers=True,
-                height=5,
-                aspect=0.8,
+                height=6,
+                aspect=0.9,
                 facet_kws={'sharey': True, 'sharex': True}
             )
             
-            g.map(plt.plot, [0, 1], [0, 1], ls="--", c="gray", alpha=0.5) # Add diagonal to all
+            # Add diagonal reference line to each facet
+            for ax in g.axes.flat:
+                ax.plot([0, 1], [0, 1], ls="--", c="gray", alpha=0.5)
+                ax.set_xlabel("Mean Predicted Probability", fontweight='bold')
+                ax.set_ylabel("Observed Proportion", fontweight='bold')
 
-            g.fig.subplots_adjust(top=0.85)
-            g.fig.suptitle(f"Calibration Plot: {ds} ({mi})")
+            g.fig.subplots_adjust(top=0.88)
+            g.fig.suptitle(f"Calibration Plot: {ds} ({mi})", fontsize=18, fontweight='bold')
             
             filename = f"CALIBRATION_PLOT_PYTHON_{ds}_{mi}.png"
-            g.savefig(filename)
+            g.savefig(filename, dpi=300, bbox_inches='tight')
             plt.close()
             print(f"  Saved: {filename}")
 

@@ -2,9 +2,7 @@ import re
 import pandas as pd
 import os
 
-# ==============================================================================
 # CONFIGURATION
-# ==============================================================================
 # List of files to process (as found in the original notebook)
 TARGET_FILES = [
     "bas.glm_full_nomi_missForest_imputed.R",
@@ -18,7 +16,7 @@ def parse_inclusion_probabilities(file_path):
     Returns a pandas DataFrame.
     """
     if not os.path.exists(file_path):
-        print(f"⚠️  File not found: {file_path}")
+        print(f"  File not found: {file_path}")
         return None
 
     print(f"Processing: {file_path}...")
@@ -89,7 +87,7 @@ def parse_inclusion_probabilities(file_path):
             })
 
     except Exception as e:
-        print(f"❌ Error processing {file_path}: {e}")
+        print(f" Error processing {file_path}: {e}")
         return None
 
     return pd.DataFrame(results)
@@ -111,7 +109,7 @@ def main():
             output_csv = f"topvar_{safe_name}.csv"
             
             df.to_csv(output_csv, index=False)
-            print(f"✓ Saved: {output_csv}")
+            print(f" Saved: {output_csv}")
             print(df.head())
             print("-" * 40)
         else:

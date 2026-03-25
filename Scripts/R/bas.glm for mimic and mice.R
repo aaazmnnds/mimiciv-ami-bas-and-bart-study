@@ -1,11 +1,10 @@
-################################################################################
 # BAS.GLM ANALYSIS SCRIPT
 #
-# Datasets: 
+# Datasets:
 # 1. Real Data: MIMIC-III, MI
 # 2. Simulated Data: MIMIC/MI x (MCAR, MAR, MNAR)
 #
-# Imputation Methods: 
+# Imputation Methods:
 # - Mean (m=1)
 # - MICE (m=3, m=20)
 # - missForest (m=1)
@@ -17,16 +16,13 @@
 # 3. Extract top variables (Top 20)
 # 4. Calculate average log predicted probabilities
 #
-################################################################################
 
 library(BAS)
 library(dplyr)
 
 set.seed(123)
 
-# ============================================================================
 # 1. CONFIGURATION
-# ============================================================================
 
 NUM_OF_FOLDS <- 10
 TOP_NUM <- 20
@@ -45,11 +41,9 @@ M_VALUES <- c(3, 20)
 
 configs <- list(
   
-  # ==========================================================================
   # REAL DATASETS (MIMIC-III & MI)
-  # ==========================================================================
   
-  # --- MIMIC ---
+  # --- MIMIC
   list(name = "MIMIC_MEAN", method = "MEAN", 
        train_pattern = "%d_90train_datamimiciii_mean_imputed.csv", 
        test_pattern = "%d_10test_datamimiciii_mean_imputed.csv", 
@@ -60,7 +54,7 @@ configs <- list(
        test_pattern = "%d_10test_datamimiciii_mice_imputed_%d.csv", 
        y_col = "ICD9_CODE"),
        
-  # --- MI ---
+  # --- MI
   list(name = "MI_MEAN", method = "MEAN", 
        train_pattern = "%d_90train_dataMI.meanimp.csv", 
        test_pattern = "%d_10test_dataMI.meanimp.csv", 
@@ -71,12 +65,9 @@ configs <- list(
        test_pattern = "%d_10test_dataMI1_%d.csv", 
        y_col = "ZSN"),
 
-
-  # ==========================================================================
   # SIMULATED DATASETS (Original Beta Case)
-  # ==========================================================================
   
-  # --- MIMIC MCAR ---
+  # --- MIMIC MCAR
   list(name = "Sim_MIMIC_MCAR_MEAN", method = "MEAN", 
        train_pattern = "%d_90train_dataMIMIC_MCAR_MEAN.csv", 
        test_pattern = "%d_10test_dataMIMIC_MCAR_MEAN.csv", 
@@ -97,7 +88,7 @@ configs <- list(
        test_pattern = "%d_10test_dataMIMIC_MCAR_KNN.csv", 
        y_col = "ICD9_CODE"),
 
-  # --- MI MCAR ---
+  # --- MI MCAR
   list(name = "Sim_MI_MCAR_MEAN", method = "MEAN", 
        train_pattern = "%d_90train_dataMI_MCAR_MEAN.csv", 
        test_pattern = "%d_10test_dataMI_MCAR_MEAN.csv", 
@@ -121,10 +112,7 @@ configs <- list(
   # (Repeat for MAR/MNAR as needed)
 )
 
-
-# ============================================================================
 # 2. HELPER FUNCTIONS
-# ============================================================================
 
 # Read and preprocess data
 get_data <- function(filename) {
@@ -200,10 +188,7 @@ evaluate_top_vars <- function(train_data, test_data, y_col, top_vars, iter) {
   return(log_probs)
 }
 
-
-# ============================================================================
 # 3. MAIN ANALYSIS LOOP
-# ============================================================================
 
 run_analysis <- function() {
   

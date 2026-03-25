@@ -1,4 +1,3 @@
-# ==============================================================================
 # IMPUTATION SCRIPT: MICE & MEAN
 #
 # Datasets:
@@ -8,7 +7,6 @@
 # Methods:
 # - MICE (PMM, m=3)
 # - Mean Imputation
-# ==============================================================================
 
 library(mice)
 
@@ -22,9 +20,7 @@ mean_impute <- function(data) {
   return(data)
 }
 
-# ==============================================================================
 # 1. MIMIC-III DATASET
-# ==============================================================================
 
 cat("\nProcessing MIMIC-III Dataset...\n")
 mimic_file <- "cleaned.mi (mimiciii).csv"
@@ -32,7 +28,7 @@ mimic_file <- "cleaned.mi (mimiciii).csv"
 if(file.exists(mimic_file)) {
     mimiciii <- read.csv(mimic_file)
     
-    # --- A. MICE Imputation ---
+    # --- A. MICE Imputation
     cat("  Running MICE (m=3)...\n")
     imputation_model_mimic <- mice(data = mimiciii, 
                                    method = "pmm",
@@ -47,7 +43,7 @@ if(file.exists(mimic_file)) {
       cat("  Saved:", file_name, "\n")
     }
     
-    # --- B. Mean Imputation ---
+    # --- B. Mean Imputation
     cat("  Running Mean Imputation...\n")
     imputed_mimic_mean <- mean_impute(mimiciii)
     write.csv(imputed_mimic_mean, "mimiciii_mean_imputed.csv", row.names = FALSE)
@@ -57,9 +53,7 @@ if(file.exists(mimic_file)) {
     cat("  Warning: MIMIC file not found:", mimic_file, "\n")
 }
 
-# ==============================================================================
 # 2. MYOCARDIAL INFARCTION (MI) DATASET
-# ==============================================================================
 
 cat("\nProcessing Myocardial Infarction Dataset...\n")
 # Note: Filename taken from folder structure `cleaned.mi (myocardial infarction).csv`
@@ -69,7 +63,7 @@ mi_file <- "cleaned.mi (myocardial infarction).csv"
 if(file.exists(mi_file)) {
     myocardial <- read.csv(mi_file)
     
-    # --- A. MICE Imputation ---
+    # --- A. MICE Imputation
     cat("  Running MICE (m=3)...\n")
     imputation_model_mi <- mice(data = myocardial, 
                                 method = "pmm",
@@ -84,7 +78,7 @@ if(file.exists(mi_file)) {
       cat("  Saved:", file_name, "\n")
     }
     
-    # --- B. Mean Imputation ---
+    # --- B. Mean Imputation
     cat("  Running Mean Imputation...\n")
     imputed_mi_mean <- mean_impute(myocardial)
     write.csv(imputed_mi_mean, "myocardial_mean_imputed.csv", row.names = FALSE)

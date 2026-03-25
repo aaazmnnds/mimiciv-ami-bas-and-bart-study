@@ -1,4 +1,3 @@
-################################################################################
 # IMPUTATION METHODS: MICE, MEAN, MISSFOREST, KNN
 #
 # Processed Datasets (Total 12):
@@ -14,11 +13,8 @@
 # - Mean Imputation
 # - missForest
 # - KNN
-################################################################################
 
-# ============================================================================
 # 1. SETUP & LIBRARIES
-# ============================================================================
 
 library(mice)       # For MICE
 library(missForest) # For missForest
@@ -27,9 +23,7 @@ library(dplyr)      # For data manipulation
 
 set.seed(123)
 
-# ============================================================================
 # 2. CONFIGURATION
-# ============================================================================
 
 # Parameters
 M_IMPUTATIONS <- 3    # MICE: Number of imputed datasets
@@ -39,7 +33,7 @@ NTREE_MF <- 100       # missForest: Number of trees
 
 # Define all 12 datasets to process
 datasets <- list(
-  # --- ORIGINAL BETA CASE (6) ---
+  # --- ORIGINAL BETA CASE (6)
   list(name = "MIMIC_MCAR", file = "Data/complete_dataset_MIMIC_MCAR.csv", response = "ICD9_CODE"),
   list(name = "MIMIC_MAR",  file = "Data/complete_dataset_MIMIC_MAR.csv",  response = "ICD9_CODE"),
   list(name = "MIMIC_MNAR", file = "Data/complete_dataset_MIMIC_MNAR.csv", response = "ICD9_CODE"),
@@ -48,7 +42,7 @@ datasets <- list(
   list(name = "MI_MAR",  file = "Data/complete_dataset_MI_MAR.csv",  response = "ZSN"),
   list(name = "MI_MNAR", file = "Data/complete_dataset_MI_MNAR.csv", response = "ZSN"),
   
-  # --- EXTENDED BETA CASE (6) ---
+  # --- EXTENDED BETA CASE (6)
   # Filenames end with _NEW_alpha10.csv based on previous script output
   list(name = "MIMIC_MCAR_EXT", file = "Data/complete_dataset_MIMIC_MCAR_NEW_alpha10.csv", response = "ICD9_CODE"),
   list(name = "MIMIC_MAR_EXT",  file = "Data/complete_dataset_MIMIC_MAR_NEW_alpha10.csv",  response = "ICD9_CODE"),
@@ -59,10 +53,7 @@ datasets <- list(
   list(name = "MI_MNAR_EXT", file = "Data/complete_dataset_MI_MNAR_NEW_alpha10.csv", response = "ZSN")
 )
 
-
-# ============================================================================
 # 3. HELPER FUNCTIONS
-# ============================================================================
 
 # Function: Separate VALUE columns from indicators
 separate_columns <- function(data, response_var) {
@@ -112,17 +103,14 @@ prepare_for_missforest <- function(data) {
   # Remove columns with >80% missing (missForest constraint)
   na_props <- colMeans(is.na(data))
   if (any(na_props > 0.8)) {
-    cat(sprintf("  ⚠️  Removing %d columns with >80%% missing for missForest\n", sum(na_props > 0.8)))
+    cat(sprintf("    Removing %d columns with >80%% missing for missForest\n", sum(na_props > 0.8)))
     data <- data[, na_props <= 0.8]
   }
   
   return(data)
 }
 
-
-# ============================================================================
 # 4. MAIN PROCESSING LOOP
-# ============================================================================
 
 cat(paste(rep("=", 80), collapse=""), "\n")
 cat("STARTING IMPUTATION PIPELINE - 12 DATASETS\n")
@@ -138,14 +126,14 @@ for (dataset_idx in seq_along(datasets)) {
   cat(sprintf("File: %s\n", ds$file))
   cat(paste(rep("=", 80), collapse=""), "\n\n")
   
-  # --- CHECK FILE EXISTENCE ---
+  # --- CHECK FILE EXISTENCE
   if (!file.exists(ds$file)) {
-    cat(sprintf("⚠️  File not found: %s\n", ds$file))
+    cat(sprintf("  File not found: %s\n", ds$file))
     cat("Skipping...\n")
     next
   }
   
-  # --- LOAD DATA ---
+  # --- LOAD DATA
   # Use stringsAsFactors=FALSE for compatibility
   data_full <- read.csv(ds$file, stringsAsFactors = FALSE)
   
@@ -158,10 +146,7 @@ for (dataset_idx in seq_along(datasets)) {
   cat(sprintf("Dimensions to impute: %d rows x %d cols\n", nrow(data_values), ncol(data_values)))
   cat(sprintf("Missing values: %d (%.2f%%)\n\n", sum(is.na(data_values)), mean(is.na(data_values))*100))
   
-  
-  # --------------------------------------------------------------------------
   # A. MICE IMPUTATION (m=3)
-  # --------------------------------------------------------------------------
   cat("--- Running MICE (m=3) ---\n")
   
   tryCatch({
@@ -180,10 +165,7 @@ for (dataset_idx in seq_along(datasets)) {
   })
   cat("\n")
   
-  
-  # --------------------------------------------------------------------------
   # B. MEAN IMPUTATION
-  # --------------------------------------------------------------------------
   cat("--- Running MEAN Imputation ---\n")
   
   tryCatch({
@@ -198,10 +180,7 @@ for (dataset_idx in seq_along(datasets)) {
   })
   cat("\n")
   
-  
-  # --------------------------------------------------------------------------
   # C. MISSFOREST IMPUTATION
-  # --------------------------------------------------------------------------
   cat("--- Running missForest ---\n")
   
   tryCatch({
@@ -218,15 +197,12 @@ for (dataset_idx in seq_along(datasets)) {
   })
   cat("\n")
   
-  
-  # --------------------------------------------------------------------------
   # D. KNN IMPUTATION
-  # --------------------------------------------------------------------------
   cat("--- Running KNN ---\n")
   
   tryCatch({
-    # Prepare data for KNN (exclude response variable from imputation set if present in data_values, 
-    # though separate_columns usually keeps response in data_values. 
+    # Prepare data for KNN (exclude response variable from imputation set if present in data_values,
+    # though separate_columns usually keeps response in data_values.
     # Logic: KNN often shouldn't use response for imputation, but here we treat all as features?
     # Original script separated response out. We will follow suit.)
     

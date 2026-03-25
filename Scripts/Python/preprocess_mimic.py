@@ -32,7 +32,7 @@ def preprocess_mimiciii_data():
     
     # Function to handle duplicates logic: prioritize maintaining key ITEMIDs if present
     def select_first_observation(group):
-        # Specific logic derived from notebook analysis: 
+        # Specific logic derived from notebook analysis:
         # Check if 78552 is in group ICD9 (though logic seemed mixed, this is the most robust interpretation)
         if 78552 in group['ICD9_CODE'].values:
             return group

@@ -1,9 +1,8 @@
-################################################################################
 # DATA SIMULATION SCRIPT (MCAR, MAR, MNAR)
 #
 # Logic:
 # 1. Use TOP 4 variables with highest missingness as predictors.
-# 2. Randomly assign β from {1.5, 1.0, 0.5, 0.1} to these 4 variables.
+# 2. Randomly assign  from {1.5, 1.0, 0.5, 0.1} to these 4 variables.
 # 3. Match outcome ratios (0s/1s) from real datasets (MIMIC-III, MI).
 #
 # Process:
@@ -12,15 +11,12 @@
 # 3. Simulate outcome Y based on true betas.
 # 4. Save complete datasets with missing indicators.
 #
-################################################################################
 
 library(missMethods)
 
 set.seed(123)
 
-# ============================================================================
 # CONFIGURATION
-# ============================================================================
 
 datasets_config <- list(
   MIMIC = list(
@@ -42,9 +38,7 @@ datasets_config <- list(
 N_TOP_VARS <- 4
 BETA_VALUES_POOL <- c(1.5, 1.0, 0.5, 0.1)
 
-# ============================================================================
 # HELPER FUNCTIONS
-# ============================================================================
 
 # Simulate binary outcome matching target proportion of 1s
 simulate_outcome_with_ratio <- function(X_true, beta_true, target_prop_ones, dataset_name = "Dataset") {
@@ -125,10 +119,7 @@ reorder_with_indicators <- function(df, response_var) {
   return(df[, new_order])
 }
 
-
-# ============================================================================
 # MAIN PROCESSING LOOP
-# ============================================================================
 
 cat("Starting Simulation...\n")
 

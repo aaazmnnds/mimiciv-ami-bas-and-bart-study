@@ -1,4 +1,3 @@
-################################################################################
 # EVALUATE BIAS
 #
 # Evaluates coefficient bias (estimates vs true betas).
@@ -10,7 +9,6 @@
 # 3. Relative Bias (%): (1/4) * Sum[ (1/10) * Sum(Relative Error) ]
 # 4. Relative MSE (%): ||beta_hat - beta_true||^2 / ||beta_true||^2
 #
-################################################################################
 
 library(dplyr)
 library(ggplot2)
@@ -27,9 +25,7 @@ cat("\n=========================================================================
 cat("BIAS EVALUATION (Absolute & Relative)\n")
 cat("================================================================================\n\n")
 
-# ============================================================================
 # FUNCTION: Calculate Bias for One Combination
-# ============================================================================
 
 calculate_bias_all_folds <- function(dataset, mechanism, method, mi_condition) {
   
@@ -38,7 +34,7 @@ calculate_bias_all_folds <- function(dataset, mechanism, method, mi_condition) {
   beta_true_vals <- beta_true_values[[key]]
   
   if (is.null(true_vars)) {
-    cat(sprintf("⚠️  No true variables found for %s\n", key))
+    cat(sprintf("  No true variables found for %s\n", key))
     return(NULL)
   }
   
@@ -50,7 +46,7 @@ calculate_bias_all_folds <- function(dataset, mechanism, method, mi_condition) {
   }
   
   if (!file.exists(file_name)) {
-    # cat("  (File not found:", file_name, ")\n") 
+    # cat("  (File not found:", file_name, ")\n")
     # Quiet error to reduce spam if files are missing
     return(NULL)
   }
@@ -89,9 +85,7 @@ calculate_bias_all_folds <- function(dataset, mechanism, method, mi_condition) {
   return(result)
 }
 
-# ============================================================================
 # 1. PROCESS ALL COMBINATIONS
-# ============================================================================
 
 all_results <- list()
 counter <- 1
@@ -113,11 +107,9 @@ for (d in DATASETS) {
 }
 
 beta_all <- bind_rows(all_results)
-cat(sprintf("✓ Calculated bias for %d total estimates.\n\n", nrow(beta_all)))
+cat(sprintf(" Calculated bias for %d total estimates.\n\n", nrow(beta_all)))
 
-# ============================================================================
 # 2. COMPUTE SUMMARY STATISTICS
-# ============================================================================
 
 # A. Relative Bias (%) per Supervisor Formula
 # (1/4) * Sum_j [ (1/10) * Sum_k (beta_hat - beta_true)/beta_true ] * 100
@@ -155,9 +147,7 @@ final_summary <- absolute_summary %>%
   left_join(relative_mse_summary %>% select(-sum_sq_error, -sum_sq_true), 
             by = c("dataset", "mechanism", "method", "mi_condition"))
 
-# ============================================================================
 # 3. SAVE OUTPUTS
-# ============================================================================
 
 write.csv(beta_all, "Results/BIAS_DETAILED_all_variables.csv", row.names = FALSE)
 write.csv(final_summary, "Results/BIAS_SUMMARY_by_combination.csv", row.names = FALSE)
@@ -168,9 +158,7 @@ cat("Saved: BIAS_DETAILED_all_variables.csv\n")
 cat("Saved: BIAS_SUMMARY_by_combination.csv\n")
 cat("Saved: BIAS_RELATIVE_for_manuscript.csv\n")
 
-# ============================================================================
 # 4. PLOTTING
-# ============================================================================
 
 cat("Generating plots...\n")
 
@@ -180,7 +168,16 @@ p1 <- ggplot(final_summary, aes(x = method, y = relative_bias_pct, fill = mi_con
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   facet_wrap(~ dataset + mechanism) +
   labs(title = "Relative Bias (%) by Method", x = NULL, y = "Relative Bias (%)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_bw(base_size = 18) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
 
 ggsave("Results/BIAS_PLOT_relative_bias.png", p1, width = 10, height = 8)
 
@@ -189,7 +186,16 @@ p2 <- ggplot(final_summary, aes(x = method, y = relative_mse_pct, fill = mi_cond
   geom_bar(stat = "identity", position = "dodge") +
   facet_wrap(~ dataset + mechanism, scales = "free_y") +
   labs(title = "Relative MSE (%) by Method", x = NULL, y = "Relative MSE (%)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_bw(base_size = 18) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
 
 ggsave("Results/BIAS_PLOT_relative_mse.png", p2, width = 10, height = 8)
 

@@ -1,12 +1,10 @@
-################################################################################
 # PLOT BETA ESTIMATES
 #
 # Logic:
-# - Visualizes Beta estimates (Mean ± SD across 10 folds).
+# - Visualizes Beta estimates (Mean  SD across 10 folds).
 # - Compares "wMI" (With Missing indicators) vs "noMI" (Without).
 # - Uses a single figure per dataset, with subplots for each True Beta value.
 #
-################################################################################
 
 library(dplyr)
 library(ggplot2)
@@ -24,9 +22,7 @@ cat("\n=========================================================================
 cat("PLOTTING BETA ESTIMATES (Comparison: wMI vs noMI)\n")
 cat("================================================================================\n\n")
 
-# ============================================================================
 # FUNCTION: Extract Beta Estimates
-# ============================================================================
 
 extract_fold_betas <- function(dataset, mechanism, method, mi_condition) {
   
@@ -68,9 +64,7 @@ extract_fold_betas <- function(dataset, mechanism, method, mi_condition) {
   return(result)
 }
 
-# ============================================================================
 # 1. EXTRACT ALL DATA
-# ============================================================================
 
 cat("Extracting data...\n")
 all_data_list <- list()
@@ -91,11 +85,9 @@ for (d in DATASETS) {
 }
 
 all_fold_data <- bind_rows(all_data_list)
-cat(sprintf("✓ Extracted %d estimates.\n\n", nrow(all_fold_data)))
+cat(sprintf(" Extracted %d estimates.\n\n", nrow(all_fold_data)))
 
-# ============================================================================
 # 2. AGGREGATE (MEAN +/- SD)
-# ============================================================================
 
 plot_data <- all_fold_data %>%
   group_by(dataset, mechanism, method, mi_condition, beta_true) %>%
@@ -105,9 +97,7 @@ plot_data <- all_fold_data %>%
     .groups = "drop"
   )
 
-# ============================================================================
 # 3. CREATE PLOTS
-# ============================================================================
 
 cat("Creating plots...\n")
 
@@ -146,10 +136,16 @@ for (ds in DATASETS) {
       scale_linetype_manual(values = c("wMI" = "solid", "noMI" = "dashed"), 
                             labels = c("wMI" = "With MI", "noMI" = "No MI")) +
       labs(title = bquote(beta[true] == .(beta_val)), x = NULL, y = "Estimate") +
-      theme_bw() +
+      theme_bw(base_size = 18) +
       theme(
         legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title = element_text(size = 18, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        strip.text = element_text(size = 18, face = "bold")
       ) +
       coord_cartesian(ylim = y_lims)
     
@@ -170,11 +166,13 @@ for (ds in DATASETS) {
   combined_plot <- grid.arrange(
     grobs = plots,
     ncol = 2,
-    top = textGrob(paste(ds, "Beta Estimates (Comparing wMI vs noMI)"), gp=gpar(fontsize=15, fontface="bold")),
+    top = textGrob(paste(ds, "Beta Estimates (Comparing wMI vs noMI)"), gp=gpar(fontsize=20, fontface="bold")),
     right = legend
   )
   
-  ggsave(paste0("Results/BETA_PLOT_", ds, "_wMI_vs_noMI.png"), combined_plot, width = 12, height = 10, bg="white")
+  # Filename to match LaTeX: nb_BETA_PLOT_MIMIC_ALL_wMI_vs_noMI.png
+  fname <- paste0("nb_BETA_PLOT_", ds, "_ALL_wMI_vs_noMI.png")
+  ggsave(fname, combined_plot, width = 14, height = 10, bg="white", dpi=300)
 }
 
 cat("Saved plots.\n")

@@ -1,4 +1,3 @@
-################################################################################
 # CREATE ALL SUMMARY TABLES
 #
 # Generates:
@@ -9,7 +8,6 @@
 # 5. BEST_PERFORMERS_summary.csv
 # 6. MASTER_SUMMARY_TABLE.xlsx (All combined)
 #
-################################################################################
 
 library(dplyr)
 library(openxlsx)
@@ -18,16 +16,14 @@ cat("\n", rep("=", 80), "\n", sep = "")
 cat("CREATING MASTER SUMMARY TABLES AND EXCEL REPORT\n")
 cat(rep("=", 80), "\n\n", sep = "")
 
-# ============================================================================
 # 1. LOAD DATA
-# ============================================================================
 
 load_csv <- function(filename) {
   if (file.exists(filename)) {
-    cat(sprintf("  ✓ Loaded: %s\n", filename))
+    cat(sprintf("   Loaded: %s\n", filename))
     return(read.csv(filename))
   } else {
-    cat(sprintf("  ⚠️  File not found: %s\n", filename))
+    cat(sprintf("    File not found: %s\n", filename))
     return(NULL)
   }
 }
@@ -39,9 +35,7 @@ pred_data   <- load_csv("Results/PREDICTION_PERFORMANCE_metrics.csv")
 
 cat("\n")
 
-# ============================================================================
 # 2. PREPARE MASTER TABLE
-# ============================================================================
 
 # Initialize with Bias Data structure or create from scratch if missing
 if (!is.null(bias_data)) {
@@ -77,9 +71,7 @@ if (!is.null(type1_data) && !("type1_error_pct_mean" %in% names(master))) {
 # Format Missing Indicator column
 master$missing_indicator <- ifelse(master$mi_condition == "wMI", "Yes", "No")
 
-# ============================================================================
 # 3. GENERATE TABLE 1: CLASSIFICATION PERFORMANCE
-# ============================================================================
 
 cat("Generating Table 1...\n")
 
@@ -106,9 +98,7 @@ table1 <- master %>%
 
 write.csv(table1, "Results/TABLE1_classification_performance.csv", row.names = FALSE)
 
-# ============================================================================
 # 4. GENERATE TABLE 2: BIAS ANALYSIS
-# ============================================================================
 
 cat("Generating Table 2...\n")
 
@@ -121,9 +111,7 @@ if (!is.null(bias_data)) {
   write.csv(table2, "Results/TABLE2_bias_analysis.csv", row.names = FALSE)
 }
 
-# ============================================================================
 # 5. GENERATE TABLE 3: PREDICTION PERFORMANCE
-# ============================================================================
 
 cat("Generating Table 3...\n")
 
@@ -136,9 +124,7 @@ if (!is.null(pred_data)) {
   write.csv(table3, "Results/TABLE3_predictive_performance.csv", row.names = FALSE)
 }
 
-# ============================================================================
 # 6. GENERATE TABLE 4: TYPE I ERROR
-# ============================================================================
 
 cat("Generating Table 4...\n")
 
@@ -158,9 +144,7 @@ if ("type1_error_pct_mean" %in% names(master)) {
   write.csv(table4, "Results/TABLE4_type1_error.csv", row.names = FALSE)
 }
 
-# ============================================================================
 # 7. GENERATE EXCEL REPORT
-# ============================================================================
 
 cat("Generating Excel Report...\n")
 
@@ -196,11 +180,9 @@ for (sheet in names(wb)) {
 }
 
 saveWorkbook(wb, "Results/MASTER_SUMMARY_TABLE.xlsx", overwrite = TRUE)
-cat("  ✓ Saved MASTER_SUMMARY_TABLE.xlsx\n")
+cat("   Saved MASTER_SUMMARY_TABLE.xlsx\n")
 
-# ============================================================================
 # 8. BEST PERFORMERS
-# ============================================================================
 
 cat("Identifying Best Performers...\n")
 
@@ -219,6 +201,6 @@ best_performers <- master %>%
   )
 
 write.csv(best_performers, "Results/BEST_PERFORMERS_summary.csv", row.names = FALSE)
-cat("  ✓ Saved BEST_PERFORMERS_summary.csv\n")
+cat("   Saved BEST_PERFORMERS_summary.csv\n")
 
 cat("\nDONE.\n")

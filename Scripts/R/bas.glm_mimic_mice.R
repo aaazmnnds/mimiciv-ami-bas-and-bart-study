@@ -1,4 +1,3 @@
-################################################################################
 # BAS.GLM ANALYSIS SCRIPT (Refactored)
 #
 # Generates evaluation artifacts for:
@@ -11,16 +10,13 @@
 # - noMI (Without Missing Indicators)
 #
 # Outputs to: Results/
-################################################################################
 
 library(BAS)
 library(dplyr)
 
 set.seed(123)
 
-# ============================================================================
 # 1. CONFIGURATION
-# ============================================================================
 
 NUM_OF_FOLDS <- 10
 TOP_NUM <- 20
@@ -35,7 +31,7 @@ M_VALUES <- c(3, 20)
 
 configs <- list(
   
-  # --- MIMIC MCAR ---
+  # --- MIMIC MCAR
   list(name = "MIMIC_MCAR_MEAN", method = "MEAN", 
        train_pattern = "Data/%d_90train_dataMIMIC_MCAR_MEAN.csv", 
        test_pattern = "Data/%d_10test_dataMIMIC_MCAR_MEAN.csv", 
@@ -56,7 +52,7 @@ configs <- list(
        test_pattern = "Data/%d_10test_dataMIMIC_MCAR_KNN.csv", 
        y_col = "ICD9_CODE"),
 
-  # --- MIMIC MAR ---
+  # --- MIMIC MAR
   list(name = "MIMIC_MAR_MEAN", method = "MEAN", 
        train_pattern = "Data/%d_90train_dataMIMIC_MAR_MEAN.csv", 
        test_pattern = "Data/%d_10test_dataMIMIC_MAR_MEAN.csv", 
@@ -77,7 +73,7 @@ configs <- list(
        test_pattern = "Data/%d_10test_dataMIMIC_MAR_KNN.csv", 
        y_col = "ICD9_CODE"),
 
-  # --- MIMIC MNAR ---
+  # --- MIMIC MNAR
   list(name = "MIMIC_MNAR_MEAN", method = "MEAN", 
        train_pattern = "Data/%d_90train_dataMIMIC_MNAR_MEAN.csv", 
        test_pattern = "Data/%d_10test_dataMIMIC_MNAR_MEAN.csv", 
@@ -98,7 +94,7 @@ configs <- list(
        test_pattern = "Data/%d_10test_dataMIMIC_MNAR_KNN.csv", 
        y_col = "ICD9_CODE"),
 
-  # --- MI MCAR ---
+  # --- MI MCAR
   list(name = "MI_MCAR_MEAN", method = "MEAN", 
        train_pattern = "Data/%d_90train_dataMI_MCAR_MEAN.csv", 
        test_pattern = "Data/%d_10test_dataMI_MCAR_MEAN.csv", 
@@ -119,7 +115,7 @@ configs <- list(
        test_pattern = "Data/%d_10test_dataMI_MCAR_KNN.csv", 
        y_col = "ZSN"),
 
-  # --- MI MAR ---
+  # --- MI MAR
   list(name = "MI_MAR_MEAN", method = "MEAN", 
        train_pattern = "Data/%d_90train_dataMI_MAR_MEAN.csv", 
        test_pattern = "Data/%d_10test_dataMI_MAR_MEAN.csv", 
@@ -140,7 +136,7 @@ configs <- list(
        test_pattern = "Data/%d_10test_dataMI_MAR_KNN.csv", 
        y_col = "ZSN"),
 
-  # --- MI MNAR ---
+  # --- MI MNAR
   list(name = "MI_MNAR_MEAN", method = "MEAN", 
        train_pattern = "Data/%d_90train_dataMI_MNAR_MEAN.csv", 
        test_pattern = "Data/%d_10test_dataMI_MNAR_MEAN.csv", 
@@ -162,9 +158,7 @@ configs <- list(
        y_col = "ZSN")
 )
 
-# ============================================================================
 # 2. HELPER FUNCTIONS
-# ============================================================================
 
 get_data <- function(filename, use_mi) {
   if (!file.exists(filename)) return(NULL)
@@ -259,9 +253,7 @@ run_bas_fold <- function(train_data, test_data, y_col, iter) {
   ))
 }
 
-# ============================================================================
 # 3. MAIN ANALYSIS LOOP
-# ============================================================================
 
 run_analysis <- function() {
   
@@ -369,18 +361,18 @@ run_analysis <- function() {
            }
          }
          
-         # --- SAVE POOLED RESULTS PER M ---
+         # --- SAVE POOLED RESULTS PER M
          if (cfg$method == "MICE") {
              # For MICE we might want to pool over m now or later.
              # The evaluation scripts expect ONE file per condition.
              # "POOLED" implicitly means combined.
-             # Logic implies we should combine all folds/imps into one file, 
+             # Logic implies we should combine all folds/imps into one file,
              # and let evaluation script handle pooling (group by fold).
              # Actually evaluation scripts check for "POOLED" in filename for MICE.
          }
        }
        
-       # --- WRITE FILES ---
+       # --- WRITE FILES
        # 1. Beta Estimates
        if (length(all_betas) > 0) {
            df_beta <- do.call(rbind, all_betas)
