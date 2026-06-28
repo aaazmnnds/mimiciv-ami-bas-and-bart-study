@@ -15,11 +15,21 @@ venv/
 .Rhistory
 .RData
 .Ruserdata
+Rplots.pdf
 
-# Editors
-.vscode/
-.idea/
+# Data and Results - not committed
+*.csv
+*.xlsx
+*.rds
+*.pdf
+*.png
+*.jpg
+Data/
+Results/
+CORRECTED/
+CORRECTED1/
+logs/
+aaazmnnds3696/
 
-# Output Results (Optional: Don't ignore if you want to commit empty results folder structure)
-# Results/*
-# !Results/.gitkeep
+# Old scripts directory
+Archive/

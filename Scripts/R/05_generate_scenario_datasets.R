@@ -10,15 +10,15 @@ set.seed(123)
 datasets_config <- list(
   MIMIC = list(
     name = "MIMIC-III",
-    original = "../../Data/cleaned.mi (mimiciii).csv",
-    missforest = "../../Data/cleaned.mimic_missForest_imputed.csv",
+    original = "Data/cleaned.mi (mimiciii).csv",
+    missforest = "Data/cleaned.mimic_missForest_imputed.csv",
     response = "ICD9_CODE",
     output_prefix = "MIMIC"
   ),
   MI = list(
     name = "Myocardial Infarction",
-    original = "../../Data/cleaned.mi (myocardial infarction).csv",
-    missforest = "../../Data/cleaned.mi_missForest_imputed.csv",
+    original = "Data/cleaned.mi (myocardial infarction)_baseline_only.csv",
+    missforest = "Data/cleaned.mi_missForest_imputed_baseline_only.csv",
     response = "ZSN",
     output_prefix = "MI"
   )
@@ -155,16 +155,16 @@ for(dataset_name in names(datasets_config)) {
       sim_res <- simulate_outcome_with_ratio(X_full[, top_idx], selected_betas, target_prop_ones)
       Y_sim <- sim_res$y
       
-      complete_data <- create_complete_dataset(X_missing, Y_sim, config$response)
-      complete_data <- reorder_with_indicators(complete_data, config$response)
+      complete_data <- data.frame(Y = Y_sim, X_missing)
+      names(complete_data)[1] <- config$response
       
       # Save with Scenario Identifier
-      dir.create(file.path("../../Data", method), showWarnings = FALSE)
-      filename <- paste0("../../Data/", method, "/complete_dataset_", config$output_prefix, "_", mech, ".csv")
+      dir.create(file.path("Data", method), showWarnings = FALSE)
+      filename <- paste0("Data/", method, "/complete_dataset_", config$output_prefix, "_", mech, ".csv")
       write.csv(complete_data, filename, row.names = FALSE)
       
       truth_info <- data.frame(variable = top_vars, beta_true = selected_betas, missingness_rate = miss_rates[top_idx])
-      truth_filename <- paste0("../../Data/", method, "/", config$output_prefix, "_", mech, "_true_variables.csv")
+      truth_filename <- paste0("Data/", method, "/", config$output_prefix, "_", mech, "_true_variables.csv")
       write.csv(truth_info, truth_filename, row.names = FALSE)
     }
   }

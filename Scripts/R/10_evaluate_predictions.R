@@ -98,22 +98,67 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
   
   if (nrow(pred_subset) == 0) return(NULL)
   
-  # 3. Calculate Metrics
-  # AUC
-  roc_obj <- roc(pred_subset$true_label, pred_subset[[pred_col]], quiet=TRUE)
-  auc_val <- as.numeric(auc(roc_obj))
+  # 3. Calculate Metrics Per Fold
+  if (!("fold" %in% names(pred_subset))) {
+    pred_subset$fold <- 1
+  }
   
-  # Classification at 0.5
-  pred_class <- ifelse(pred_subset[[pred_col]] > 0.5, 1, 0)
-  TP <- sum(pred_class == 1 & pred_subset$true_label == 1)
-  TN <- sum(pred_class == 0 & pred_subset$true_label == 0)
-  FP <- sum(pred_class == 1 & pred_subset$true_label == 0)
-  FN <- sum(pred_class == 0 & pred_subset$true_label == 1)
+  fold_metrics <- pred_subset %>%
+    group_by(fold) %>%
+    summarise(
+      auc_val = {
+        if(length(unique(true_label)) > 1) {
+            roc_obj <- suppressMessages(roc(true_label, .data[[pred_col]], quiet=TRUE))
+            as.numeric(auc(roc_obj))
+        } else { NA }
+      },
+      f1_val = {
+        pred_class <- ifelse(.data[[pred_col]] > 0.5, 1, 0)
+        TP <- sum(pred_class == 1 & true_label == 1)
+        FP <- sum(pred_class == 1 & true_label == 0)
+        FN <- sum(pred_class == 0 & true_label == 1)
+        prec <- if((TP+FP)>0) TP/(TP+FP) else 0
+        rec  <- if((TP+FN)>0) TP/(TP+FN) else 0
+        if((prec+rec)>0) 2*(prec*rec)/(prec+rec) else 0
+      },
+      accuracy = {
+        pred_class <- ifelse(.data[[pred_col]] > 0.5, 1, 0)
+        sum(pred_class == true_label) / length(true_label)
+      },
+      precision_val = {
+        pred_class <- ifelse(.data[[pred_col]] > 0.5, 1, 0)
+        TP <- sum(pred_class == 1 & true_label == 1)
+        FP <- sum(pred_class == 1 & true_label == 0)
+        if((TP+FP)>0) TP/(TP+FP) else 0
+      },
+      recall_val = {
+        pred_class <- ifelse(.data[[pred_col]] > 0.5, 1, 0)
+        TP <- sum(pred_class == 1 & true_label == 1)
+        FN <- sum(pred_class == 0 & true_label == 1)
+        if((TP+FN)>0) TP/(TP+FN) else 0
+      },
+      alpp_val = {
+        true_probs <- ifelse(true_label == 1, .data[[pred_col]], 1 - .data[[pred_col]])
+        true_probs[true_probs < 1e-10] <- 1e-10
+        mean(log(true_probs))
+      },
+      .groups="drop"
+    )
+    
+  auc_mean <- mean(fold_metrics$auc_val, na.rm=TRUE)
+  auc_sd   <- sd(fold_metrics$auc_val, na.rm=TRUE)
+  f1_mean  <- mean(fold_metrics$f1_val, na.rm=TRUE)
+  f1_sd    <- sd(fold_metrics$f1_val, na.rm=TRUE)
+  alpp_mean <- mean(fold_metrics$alpp_val, na.rm=TRUE)
+  alpp_sd  <- sd(fold_metrics$alpp_val, na.rm=TRUE)
   
-  accuracy <- (TP + TN) / nrow(pred_subset)
-  precision <- if((TP+FP)>0) TP/(TP+FP) else 0
-  recall    <- if((TP+FN)>0) TP/(TP+FN) else 0
-  f1        <- if((precision+recall)>0) 2*(precision*recall)/(precision+recall) else 0
+  acc_mean <- mean(fold_metrics$accuracy, na.rm=TRUE)
+  prec_mean <- mean(fold_metrics$precision_val, na.rm=TRUE)
+  rec_mean <- mean(fold_metrics$recall_val, na.rm=TRUE)
+  
+  auc_str  <- sprintf("%.3f (%.3f)", auc_mean, if(is.na(auc_sd)) 0 else auc_sd)
+  f1_str   <- sprintf("%.3f (%.3f)", f1_mean, if(is.na(f1_sd)) 0 else f1_sd)
+  alpp_str <- sprintf("%.3f (%.3f)", alpp_mean, if(is.na(alpp_sd)) 0 else alpp_sd)
   
   return(data.frame(
       dataset = dataset,
@@ -121,12 +166,18 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
       method = method,
       mi_condition = mi_condition,
       best_num_top = best_num_top,
-      auc = auc_val,
-      f1_score = f1,
-      accuracy = accuracy,
-      precision = precision,
-      recall = recall,
-      avg_log_likelihood = best_log_lik
+      auc = auc_mean,
+      auc_sd = auc_sd,
+      auc_formatted = auc_str,
+      f1_score = f1_mean,
+      f1_sd = f1_sd,
+      f1_formatted = f1_str,
+      accuracy = acc_mean,
+      precision = prec_mean,
+      recall = rec_mean,
+      avg_log_likelihood = alpp_mean,
+      alpp_sd = alpp_sd,
+      alpp_formatted = alpp_str
   ))
 }
 

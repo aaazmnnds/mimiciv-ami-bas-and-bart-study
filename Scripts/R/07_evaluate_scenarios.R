@@ -70,36 +70,70 @@ for (method in SELECTION_METHODS) {
       true_vars_df <- read.csv(truth_file)
       true_vars <- true_vars_df$variable
       
-      # Run for MEAN (wMI)
-      cat("    Running MEAN (wMI)...\n")
-      file_mean <- paste0("../../Data/", method, "/imputed_", dataset, "_", mech, "_MEAN.csv")
-      res_mean <- run_bas_snapshot(file_mean, y_col, true_vars, dataset)
-      if(!is.null(res_mean)) {
-        res_mean$method_scenario <- method
-        res_mean$dataset <- dataset
-        res_mean$mechanism <- mech
-        res_mean$imputation <- "MEAN"
-        results_all[[length(results_all) + 1]] <- res_mean
+      # Run for MEAN (wMI) (COMMENTED OUT)
+      # cat("    Running MEAN (wMI)...\n")
+      # file_mean <- paste0("../../Data/", method, "/imputed_", dataset, "_", mech, "_MEAN.csv")
+      # res_mean <- run_bas_snapshot(file_mean, y_col, true_vars, dataset)
+      # if(!is.null(res_mean)) {
+      #   res_mean$method_scenario <- method
+      #   res_mean$dataset <- dataset
+      #   res_mean$mechanism <- mech
+      #   res_mean$imputation <- "MEAN"
+      #   results_all[[length(results_all) + 1]] <- res_mean
+      # }
+      
+      # Run for MICE (m=1 only for snapshot, wMI) (COMMENTED OUT)
+      # cat("    Running MICE m=1 (wMI)...\n")
+      # file_mice <- paste0("../../Data/", method, "/imputed_", dataset, "_", mech, "_MICE_1.csv")
+      # res_mice <- run_bas_snapshot(file_mice, y_col, true_vars, dataset)
+      # if(!is.null(res_mice)) {
+      #   res_mice$method_scenario <- method
+      #   res_mice$dataset <- dataset
+      #   res_mice$mechanism <- mech
+      #   res_mice$imputation <- "MICE"
+      #   results_all[[length(results_all) + 1]] <- res_mice
+      # }
+
+      # Run for KNN (wMI)
+      cat("    Running KNN (wMI)...\n")
+      file_knn <- paste0("../../Data/", method, "/imputed_", dataset, "_", mech, "_KNN.csv")
+      res_knn <- run_bas_snapshot(file_knn, y_col, true_vars, dataset)
+      if(!is.null(res_knn)) {
+        res_knn$method_scenario <- method
+        res_knn$dataset <- dataset
+        res_knn$mechanism <- mech
+        res_knn$imputation <- "KNN"
+        results_all[[length(results_all) + 1]] <- res_knn
       }
       
-      # Run for MICE (m=1 only for snapshot, wMI)
-      cat("    Running MICE m=1 (wMI)...\n")
-      file_mice <- paste0("../../Data/", method, "/imputed_", dataset, "_", mech, "_MICE_1.csv")
-      res_mice <- run_bas_snapshot(file_mice, y_col, true_vars, dataset)
-      if(!is.null(res_mice)) {
-        res_mice$method_scenario <- method
-        res_mice$dataset <- dataset
-        res_mice$mechanism <- mech
-        res_mice$imputation <- "MICE"
-        results_all[[length(results_all) + 1]] <- res_mice
+      # Run for missForest (wMI)
+      cat("    Running missForest (wMI)...\n")
+      file_mf <- paste0("../../Data/", method, "/imputed_", dataset, "_", mech, "_missForest.csv")
+      res_mf <- run_bas_snapshot(file_mf, y_col, true_vars, dataset)
+      if(!is.null(res_mf)) {
+        res_mf$method_scenario <- method
+        res_mf$dataset <- dataset
+        res_mf$mechanism <- mech
+        res_mf$imputation <- "missForest"
+        results_all[[length(results_all) + 1]] <- res_mf
       }
     }
   }
 }
 
-# Combine and Save
-final_results <- bind_rows(results_all)
-write.csv(final_results, "../../Results/SCENARIO_ANALYSIS_BAS_PIP_SNAPSHOT.csv", row.names = FALSE)
+# Combine new results
+new_results <- bind_rows(results_all)
+
+# Read existing results to prevent overwriting MEAN/MICE
+snapshot_file <- "../../Results/SCENARIO_ANALYSIS_BAS_PIP_SNAPSHOT.csv"
+if(file.exists(snapshot_file)) {
+  old_results <- read.csv(snapshot_file)
+  final_results <- bind_rows(old_results, new_results)
+} else {
+  final_results <- new_results
+}
+
+write.csv(final_results, snapshot_file, row.names = FALSE)
 
 # Summarize Performance by Scenario
 summary_perf <- final_results %>%
