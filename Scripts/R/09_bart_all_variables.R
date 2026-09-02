@@ -1,3 +1,4 @@
+.libPaths("~/R/library")
 # BART ANALYSIS SCRIPT (CORRECTED PIPELINE)
 #
 # Generates evaluation artifacts for:
@@ -24,7 +25,7 @@ NUM_OF_FOLDS <- 10
 
 
 configs <- list(
-  list(name = "MIMIC_REAL", file = "Data/cleaned.mi (mimiciii).csv", y_col = "ICD9_CODE", is_sim = FALSE),
+  list(name = "MIMIC_REAL", file = "Data/mimic-iv sepsis.csv", y_col = "hospital_expire_flag", is_sim = FALSE),
   list(name = "MI_REAL", file = "Data/cleaned.mi (myocardial infarction)_baseline_only.csv", y_col = "ZSN", is_sim = FALSE)
 )
 
@@ -236,10 +237,24 @@ run_analysis <- function() {
               }
               
             } else if (method == "MICE") {
-              train_imp <- mice::complete(mice_res, imp_idx)
+              capture.output(
+                mice_res <- mice::mice(train_imp, m = 1,
+                                       method = 'pmm', printFlag = FALSE)
+              )
+              train_imp <- mice::complete(mice_res, 1)
+              test_mice <- mice::mice.mids(mice_res, newdata = test_imp,
+                                            printFlag = FALSE)
+              test_imp <- mice::complete(test_mice, 1)
+              
+              # Fallback: fill any remaining NAs with training means
               c_means <- colMeans(train_imp, na.rm = TRUE)
-              for (col in names(test_imp)) {
-                test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+              for (col in names(train_imp)) {
+                if (any(is.na(train_imp[[col]]))) {
+                  train_imp[is.na(train_imp[[col]]), col] <- c_means[col]
+                }
+                if (any(is.na(test_imp[[col]]))) {
+                  test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+                }
               }
             } else if (method == "Z_only") {
               # No imputation. We just use Z. We'll drop train_imp in Step 5.

@@ -11,16 +11,19 @@
 #
 # Outputs to: Results/
 
+.libPaths("~/R/library")
 library(BAS)
 library(dplyr)
 library(mice)
 library(missForest)
+library(missRanger)
 library(VIM)
 
 set.seed(123)
 
 # 1. CONFIGURATION
 NUM_OF_FOLDS <- 10
+N_REPEATS <- 1
 TOP_NUM <- 20
 ITER <- 1500
 
@@ -28,7 +31,7 @@ M_VALUES <- c(3, 20)
 
 configs <- list(
   # --- REAL DATA (Using Baseline Only for AMI)
-  # list(name = "MIMIC_REAL", file = "Data/cleaned.mi (mimiciii).csv", y_col = "ICD9_CODE", is_sim = FALSE),
+  list(name = "MIMIC_REAL", file = "Data/mimic-iv sepsis.csv", y_col = "hospital_expire_flag", is_sim = FALSE),
   list(name = "MI_REAL", file = "Data/cleaned.mi (myocardial infarction)_baseline_only.csv", y_col = "ZSN", is_sim = FALSE)
   
   # --- SIMULATED DATA
@@ -70,7 +73,7 @@ run_bas_fold <- function(train_aug, test_aug, y_col, iter) {
               data = train_aug, method = "MCMC", 
               MCMC.iterations = iter, betaprior = robust(nrow(train_aug)), 
               family = binomial(link = "logit"), modelprior = beta.binomial(1, 1))
-    }, timeout = 120, onTimeout = "error")
+    }, timeout = 300, onTimeout = "error")
   }, error = function(e) {
     cat(sprintf("    [TIMEOUT/ERROR: %s]\n", conditionMessage(e)))
     return(NULL)
@@ -87,6 +90,7 @@ run_bas_fold <- function(train_aug, test_aug, y_col, iter) {
   
   sorted_vars <- names(sort(probs, decreasing = TRUE))
   top_n_vars <- sorted_vars[1:min(length(sorted_vars), TOP_NUM)]
+  top_n_pips <- probs[top_n_vars]
   
   if (length(top_n_vars) == 0) return(NULL)
   log_probs <- numeric(length(top_n_vars))
@@ -120,6 +124,7 @@ run_bas_fold <- function(train_aug, test_aug, y_col, iter) {
   return(list(
     beta_hat   = beta_hat,
     top_vars   = top_n_vars,
+    top_pips   = top_n_pips,
     log_probs  = log_probs,
     preds_best = pred_best,
     best_k     = best_k,
@@ -139,9 +144,10 @@ run_analysis <- function() {
     # Remove any pre-existing _missing indicators from simulation step so we can compute freshly inside loop
     value_cols <- names(raw_data)[!grepl("_missing|total_missing", names(raw_data))]
     raw_data <- raw_data[, value_cols]
+    # Exclude patient ID columns
+    raw_data <- raw_data[, !names(raw_data) %in% c("HADM_ID", "subject_id", "stay_id"), drop=FALSE]
     
     y_target <- raw_data[[cfg$y_col]]
-    folds <- create_stratified_folds(y_target, k = NUM_OF_FOLDS)
     
     for (method in METHODS) {
       for (use_mi in c(FALSE, TRUE)) {
@@ -159,14 +165,58 @@ run_analysis <- function() {
           output_suffix <- "_m1"
         }
         
+        # Skip if already completed
+        if (method == "MICE") {
+          fname_check <- paste0("Results/CORRECTED/", full_name, "_POOLED_log_probabilities.csv")
+          fname_tmp_check <- paste0("Results/CORRECTED/tmp_", full_name, "_POOLED_log_probabilities.csv")
+        } else {
+          fname_check <- paste0("Results/CORRECTED/", full_name, "_log_probabilities.csv")
+          fname_tmp_check <- paste0("Results/CORRECTED/tmp_", full_name, "_log_probabilities.csv")
+        }
+        if (file.exists(fname_check)) {
+          existing <- read.csv(fname_check)
+          if ("rep" %in% names(existing) && max(existing$rep, na.rm=TRUE) >= N_REPEATS) {
+            cat(sprintf("\n--- Skipping %s (already completed) ---\n", full_name))
+            next
+          }
+        }
+        
         cat(sprintf("\n--- Processing %s ---\n", full_name))
+        
+        df_betas_all <- data.frame()
+        df_selected_all <- data.frame()
+        df_logprobs_all <- data.frame()
+        df_preds_all <- data.frame()
+        
+        # Resume from tmp file if exists
+        if (method == "MICE") {
+          fname_tmp_check <- paste0("Results/CORRECTED/tmp_", full_name, "_POOLED_log_probabilities.csv")
+        } else {
+          fname_tmp_check <- paste0("Results/CORRECTED/tmp_", full_name, "_log_probabilities.csv")
+        }
+        start_rep <- 1
+        if (file.exists(fname_tmp_check)) {
+          tmp_log <- read.csv(fname_tmp_check)
+          completed_reps <- max(tmp_log$rep, na.rm=TRUE)
+          start_rep <- completed_reps + 1
+          cat(sprintf("  Resuming from repeat %d\n", start_rep))
+          df_betas_all <- if(file.exists(paste0("Results/CORRECTED/tmp_", full_name, "_beta_estimates.csv"))) read.csv(paste0("Results/CORRECTED/tmp_", full_name, "_beta_estimates.csv")) else data.frame()
+          df_selected_all <- if(file.exists(paste0("Results/CORRECTED/tmp_", full_name, "_selected_variables.csv"))) read.csv(paste0("Results/CORRECTED/tmp_", full_name, "_selected_variables.csv")) else data.frame()
+          df_logprobs_all <- read.csv(fname_tmp_check)
+          df_preds_all <- if(file.exists(paste0("Results/CORRECTED/tmp_", full_name, "_predictions.csv"))) read.csv(paste0("Results/CORRECTED/tmp_", full_name, "_predictions.csv")) else data.frame()
+        }
         
         all_betas <- list()
         all_selected <- list()
         all_preds <- list()
         all_logprobs <- list()
         
-        for (fold in 1:NUM_OF_FOLDS) {
+        if (start_rep <= N_REPEATS) {
+        for (rep in start_rep:N_REPEATS) {
+          set.seed(rep * 100)
+          folds <- create_stratified_folds(y_target, k = NUM_OF_FOLDS)
+          
+          for (fold in 1:NUM_OF_FOLDS) {
           cat(sprintf("    Fold %d...", fold))
           test_idx <- folds[[fold]]
           
@@ -200,47 +250,67 @@ run_analysis <- function() {
           
           # STEP 4: Imputation
           for (imp_idx in files_indices) {
-            
             train_imp <- train_x_scaled
-            test_imp <- test_x_scaled
-            
+            test_imp  <- test_x_scaled
+
             if (method == "MEAN") {
               c_means <- colMeans(train_imp, na.rm = TRUE)
               for (col in names(train_imp)) {
                 train_imp[is.na(train_imp[[col]]), col] <- c_means[col]
-                test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+                test_imp[is.na(test_imp[[col]]), col]   <- c_means[col]
               }
-              
+
             } else if (method == "KNN") {
-              # kNN on train
-              train_knn <- VIM::kNN(train_imp, k=5, imp_var=FALSE)
-              train_imp <- train_knn
-              # Fallback for test: train column means
-              c_means <- colMeans(train_imp, na.rm = TRUE)
-              for (col in names(test_imp)) {
-                test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
-              }
-              
+              # Fit kNN on training data
+              k_knn <- round(sqrt(nrow(train_imp)))
+              train_imp <- VIM::kNN(train_imp, k = k_knn, imp_var = FALSE)
+              # Apply to test: bind test to imputed training, run kNN, extract test rows
+              n_train <- nrow(train_imp)
+              combined <- rbind(train_imp, test_imp)
+              combined_imp <- VIM::kNN(combined, k = k_knn, imp_var = FALSE)
+              test_imp <- combined_imp[(n_train + 1):nrow(combined_imp), , drop = FALSE]
+
             } else if (method == "missForest") {
-              mf_res <- missForest::missForest(train_imp, verbose = FALSE)
-              train_imp <- mf_res$ximp
-              # Fallback for test: train column means
+              # Fit missRanger on training data saving random forest models
+              mr_obj <- missRanger::missRanger(train_imp, verbose = 0,
+                                               num.trees = 100, pmm.k = 3,
+                                               keep_forests = TRUE)
+              train_imp <- mr_obj$data
+              # Fill any test columns with no missingness in training using training means
               c_means <- colMeans(train_imp, na.rm = TRUE)
               for (col in names(test_imp)) {
-                test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+                if (any(is.na(test_imp[[col]]))) {
+                  test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+                }
               }
-              
+              # Apply saved models to test data — no data leakage
+              test_imp <- predict(mr_obj, newdata = test_imp)
+
             } else if (method == "MICE") {
-              capture.output(mice_res <- mice::mice(train_imp, m = max(files_indices), method = 'pmm', printFlag = FALSE))
+              # Fit MICE on training data
+              capture.output(
+                mice_res <- mice::mice(train_imp, m = max(files_indices),
+                                       method = 'pmm', printFlag = FALSE)
+              )
               train_imp <- mice::complete(mice_res, imp_idx)
-              # Fallback for test: train column means
+              # Apply to test using mice.mids
+              test_mice <- mice::mice.mids(mice_res, newdata = test_imp,
+                                            printFlag = FALSE)
+              test_imp <- mice::complete(test_mice, imp_idx)
+              
+              # Fallback: fill any remaining NAs with training means
               c_means <- colMeans(train_imp, na.rm = TRUE)
-              for (col in names(test_imp)) {
-                test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+              for (col in names(train_imp)) {
+                if (any(is.na(train_imp[[col]]))) {
+                  train_imp[is.na(train_imp[[col]]), col] <- c_means[col]
+                }
+                if (any(is.na(test_imp[[col]]))) {
+                  test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
+                }
               }
             }
-            
-            # STEP 5: Augmentation
+
+          # STEP 5: Augmentation
             if (use_mi) {
               train_aug <- cbind(y = y_train, train_imp, train_indicators, total_missing_values = train_total_missing)
               test_aug <- cbind(y = y_test, test_imp, test_indicators, total_missing_values = test_total_missing)
@@ -258,21 +328,53 @@ run_analysis <- function() {
               betas <- res$beta_hat
               betas <- betas[names(betas) != "Intercept"]
               if (length(betas) > 0) {
-                 all_betas[[length(all_betas)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, variable = names(betas), beta_hat = as.numeric(betas))
+                 all_betas[[length(all_betas)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, rep = rep, variable = names(betas), beta_hat = as.numeric(betas))
               }
-              all_selected[[length(all_selected)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, variable = res$top_vars, rank = 1:length(res$top_vars))
-              all_logprobs[[length(all_logprobs)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, num_top = 1:length(res$log_probs), log_prob = res$log_probs)
-              all_preds[[length(all_preds)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, obs_id = 1:length(res$true_y), true_label = res$true_y, predicted_prob = res$preds_best, num_top = res$best_k)
+              all_selected[[length(all_selected)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, rep = rep, variable = res$top_vars, rank = 1:length(res$top_vars), pip = res$top_pips)
+              all_logprobs[[length(all_logprobs)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, rep = rep, num_top = 1:length(res$log_probs), log_prob = res$log_probs)
+              all_preds[[length(all_preds)+1]] <- data.frame(fold = fold, imp_idx = imp_idx, rep = rep, obs_id = 1:length(res$true_y), true_label = res$true_y, predicted_prob = res$preds_best, num_top = res$best_k)
             }
           }
           cat(" Done\n")
         }
         
+        # After fold loop closes, accumulate results from this repeat
+        if (length(all_betas) > 0) df_betas_all <- rbind(df_betas_all, do.call(rbind, all_betas))
+        if (length(all_selected) > 0) df_selected_all <- rbind(df_selected_all, do.call(rbind, all_selected))
+        if (length(all_logprobs) > 0) df_logprobs_all <- rbind(df_logprobs_all, do.call(rbind, all_logprobs))
+        if (length(all_preds) > 0) df_preds_all <- rbind(df_preds_all, do.call(rbind, all_preds))
+        
+        # Clear lists to free memory
+        all_betas <- list()
+        all_selected <- list()
+        all_preds <- list()
+        all_logprobs <- list()
+        
+        # Save intermediate results after each repeat
+        if (nrow(df_betas_all) > 0) {
+          fname_tmp <- paste0("Results/CORRECTED/tmp_", full_name, "_beta_estimates.csv")
+          write.csv(df_betas_all, fname_tmp, row.names=FALSE)
+        }
+        if (nrow(df_logprobs_all) > 0) {
+          fname_tmp <- paste0("Results/CORRECTED/tmp_", full_name, "_log_probabilities.csv")
+          write.csv(df_logprobs_all, fname_tmp, row.names=FALSE)
+        }
+        if (nrow(df_preds_all) > 0) {
+          fname_tmp <- paste0("Results/CORRECTED/tmp_", full_name, "_predictions.csv")
+          write.csv(df_preds_all, fname_tmp, row.names=FALSE)
+        }
+        if (nrow(df_selected_all) > 0) {
+          fname_tmp <- paste0("Results/CORRECTED/tmp_", full_name, "_selected_variables.csv")
+          write.csv(df_selected_all, fname_tmp, row.names=FALSE)
+        }
+        } # close rep loop
+        } # close start_rep guard
+        
         # Save results
-        if (length(all_betas) > 0) {
-           df_beta <- do.call(rbind, all_betas)
+        if (nrow(df_betas_all) > 0) {
+           df_beta <- df_betas_all
            if (method == "MICE") {
-               df_beta <- df_beta %>% group_by(fold, variable) %>% summarise(beta_pooled = mean(beta_hat), .groups="drop")
+               df_beta <- df_beta %>% group_by(rep, fold, variable) %>% summarise(beta_pooled = mean(beta_hat), .groups="drop")
                fname <- paste0("Results/CORRECTED/", full_name, "_POOLED_beta_estimates.csv")
            } else {
                fname <- paste0("Results/CORRECTED/", full_name, "_beta_estimates.csv")
@@ -280,10 +382,10 @@ run_analysis <- function() {
            write.csv(df_beta, fname, row.names=FALSE)
         }
         
-        if (length(all_selected) > 0) {
-           df_sel <- do.call(rbind, all_selected)
+        if (nrow(df_selected_all) > 0) {
+           df_sel <- df_selected_all
            if (method == "MICE") {
-               df_sel <- df_sel %>% distinct(fold, variable)
+               df_sel <- df_sel %>% group_by(fold, variable) %>% summarise(rank = mean(rank, na.rm=TRUE), pip = mean(pip, na.rm=TRUE), .groups="drop")
                fname <- paste0("Results/CORRECTED/", full_name, "_POOLED_selected_variables.csv")
            } else {
                fname <- paste0("Results/CORRECTED/", full_name, "_selected_variables.csv")
@@ -291,28 +393,36 @@ run_analysis <- function() {
            write.csv(df_sel, fname, row.names=FALSE)
         }
         
-        if (length(all_logprobs) > 0) {
-           df_log <- do.call(rbind, all_logprobs)
+        if (nrow(df_logprobs_all) > 0) {
+           df_log <- df_logprobs_all
            if (method == "MICE") {
-               df_log <- df_log %>% group_by(num_top) %>% summarise(log_prob_pooled = mean(log_prob), .groups="drop")
+               df_log <- df_log %>% group_by(rep, num_top) %>% summarise(log_prob_pooled = mean(log_prob), .groups="drop")
                fname <- paste0("Results/CORRECTED/", full_name, "_POOLED_log_probabilities.csv")
            } else {
-               df_log <- df_log %>% group_by(num_top) %>% summarise(avg_log_prob = mean(log_prob), .groups="drop")
+               df_log <- df_log %>% group_by(rep, num_top) %>% summarise(avg_log_prob = mean(log_prob), .groups="drop")
                fname <- paste0("Results/CORRECTED/", full_name, "_log_probabilities.csv")
            }
            write.csv(df_log, fname, row.names=FALSE)
         }
         
-        if (length(all_preds) > 0) {
-           df_pred <- do.call(rbind, all_preds)
+        if (nrow(df_preds_all) > 0) {
+           df_pred <- df_preds_all
            if (method == "MICE") {
-               df_pred <- df_pred %>% group_by(fold, obs_id, true_label, num_top) %>% summarise(predicted_prob_pooled = mean(predicted_prob, na.rm=TRUE), .groups="drop")
+               df_pred <- df_pred %>% group_by(rep, fold, obs_id, true_label, num_top) %>% summarise(predicted_prob_pooled = mean(predicted_prob, na.rm=TRUE), .groups="drop")
                fname <- paste0("Results/CORRECTED/", full_name, "_POOLED_predictions.csv")
            } else {
                fname <- paste0("Results/CORRECTED/", full_name, "_predictions.csv")
            }
            write.csv(df_pred, fname, row.names=FALSE)
         }
+        
+        # Clean up tmp files after successful save
+        suppressWarnings({
+          file.remove(paste0("Results/CORRECTED/tmp_", full_name, "_beta_estimates.csv"))
+          file.remove(paste0("Results/CORRECTED/tmp_", full_name, "_log_probabilities.csv"))
+          file.remove(paste0("Results/CORRECTED/tmp_", full_name, "_predictions.csv"))
+          file.remove(paste0("Results/CORRECTED/tmp_", full_name, "_selected_variables.csv"))
+        })
       }
     }
   }

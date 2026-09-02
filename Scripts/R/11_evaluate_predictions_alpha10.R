@@ -14,30 +14,42 @@ library(dplyr)
 library(ggplot2)
 library(pROC)
 
-load("Data/evaluation_config_4VAR.RData")
-
+MODELS <- c("BAS", "BART")
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
-MECHANISMS <- c("MCAR_ALPHA10", "MAR_ALPHA10", "MNAR_ALPHA10")
+MECHANISMS <- c("MCAR", "MAR", "MNAR")
 MI_CONDITIONS <- c("noMI", "wMI")
 
 cat("\n================================================================================\n")
-cat("PREDICTION PERFORMANCE EVALUATION\n")
+cat("PREDICTION PERFORMANCE EVALUATION (ALPHA10)\n")
 cat("================================================================================\n\n")
 
 # FUNCTION: Calculate metrics for One Combination
 
-calculate_prediction_metrics <- function(dataset, mechanism, method, mi_condition) {
+calculate_prediction_metrics <- function(model, dataset, mechanism, method, mi_condition) {
   
   # File Names
-  if (method == "MICE") {
-    pred_file <- paste0("Results/CORRECTED/ALPHA10/results_BAS_", dataset, "_", mechanism, "_", mi_condition, "_POOLED_predictions_m1.csv\")
-    log_file  <- paste0("Results/CORRECTED/ALPHA10/results_BAS_", dataset, "_", mechanism, "_", mi_condition, "_POOLED_log_probabilities_m1.csv\")
-    pred_col  <- "predicted_prob_pooled"
-  } else {
-    pred_file <- paste0("Results/CORRECTED/ALPHA10/results_BAS_", dataset, "_", mechanism, "_", method, "_", mi_condition, "_predictions_m1.csv\")
-    log_file  <- paste0("Results/CORRECTED/ALPHA10/results_BAS_", dataset, "_", mechanism, "_", method, "_", mi_condition, "_log_probabilities_m1.csv\")
-    pred_col  <- "predicted_prob"
+  if (model == "BAS") {
+    if (method == "MICE") {
+      pred_file <- paste0("Results/CORRECTED/ALPHA10/", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_predictions.csv")
+      log_file  <- paste0("Results/CORRECTED/ALPHA10/", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_log_probabilities.csv")
+    } else {
+      pred_file <- paste0("Results/CORRECTED/ALPHA10/", dataset, "_", mechanism, "_ALPHA10_", method, "_", mi_condition, "_predictions.csv")
+      log_file  <- paste0("Results/CORRECTED/ALPHA10/", dataset, "_", mechanism, "_ALPHA10_", method, "_", mi_condition, "_log_probabilities.csv")
+    }
+  } else if (model == "BART") {
+    if (method == "MICE") {
+      pred_file <- paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_predictions_m3.csv")
+      log_file  <- paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_log_probabilities_m3.csv")
+      # Fallback to _m5 if _m3 not found
+      if (!file.exists(pred_file) && file.exists(paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_predictions_m5.csv"))) {
+        pred_file <- paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_predictions_m5.csv")
+        log_file  <- paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_MICE_", mi_condition, "_POOLED_log_probabilities_m5.csv")
+      }
+    } else {
+      pred_file <- paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_", method, "_", mi_condition, "_predictions_m1.csv")
+      log_file  <- paste0("Results/CORRECTED/ALPHA10/results_BART_", dataset, "_", mechanism, "_ALPHA10_", method, "_", mi_condition, "_log_probabilities_m1.csv")
+    }
   }
   
   if (!file.exists(pred_file) || !file.exists(log_file)) return(NULL)
@@ -45,46 +57,30 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
   pred_data <- read.csv(pred_file)
   log_data  <- read.csv(log_file)
   
+  # Detect Prediction and Label Columns
+  pred_col <- if ("predicted_prob_pooled" %in% names(pred_data)) "predicted_prob_pooled" else "predicted_prob"
+  if (!("true_label" %in% names(pred_data)) && ("y_true" %in% names(pred_data))) {
+    pred_data$true_label <- pred_data$y_true
+  }
+  
   # 1. Select Best Model Size (num_top) based on max log-likelihood
-  if (method == "MICE") {
-    best_idx <- which.max(log_data$log_prob_pooled)
-    best_num_top <- log_data$num_top[best_idx]
-    best_log_lik <- log_data$log_prob_pooled[best_idx]
+  log_col <- if ("log_prob_pooled" %in% names(log_data)) {
+    "log_prob_pooled"
+  } else if ("avg_log_prob" %in% names(log_data)) {
+    "avg_log_prob"
+  } else if ("avg_logp" %in% names(log_data)) {
+    "avg_logp"
   } else {
-    # Check if we have 'avg_log_prob' column or need to average V1..V10
-    if ("avg_log_prob" %in% names(log_data)) {
-        best_idx <- which.max(log_data$avg_log_prob)
-        best_num_top <- log_data$num_top[best_idx]
-        best_log_lik <- log_data$avg_log_prob[best_idx]
-    } else {
-        # Fallback: assume column with max value in the first row is the best?
-        # Or usually there's a structure like 'num_top', 'avg_log_prob'.
-        # If simpler structure (rows=num_top), just take row max.
-        # Assuming standard structure from our cleaned scripts:
-        if ("num_top" %in% names(log_data)) {
-             # Re-calculate average if needed or take the column
-             # Let's assume there is a Summary Column or we take the row max if 'avg_log_prob' missing
-             # For safety, let's just pick num_top=4 (since we know Truth=4) if we can't determine optimization
-             # But the script claims to optimize. Let's try finding 'avg_log_prob' again.
-             if(!"avg_log_prob" %in% names(log_data)) {
-                 # Create it if missing (e.g. average of V1..VK)
-                 v_cols <- grep("^V", names(log_data), value=TRUE)
-                 if(length(v_cols) > 0) {
-                     log_data$avg_log_prob <- rowMeans(log_data[, v_cols], na.rm=TRUE)
-                     best_idx <- which.max(log_data$avg_log_prob)
-                     best_num_top <- log_data$num_top[best_idx]
-                     best_log_lik <- log_data$avg_log_prob[best_idx]
-                 } else {
-                     # Fallback to 4 variables
-                     best_num_top <- 4
-                     best_log_lik <- NA
-                 }
-             }
-        } else {
-             best_num_top <- 4
-             best_log_lik <- NA
-        }
-    }
+    NULL
+  }
+  
+  if (!is.null(log_col) && "num_top" %in% names(log_data) && nrow(log_data) > 0) {
+    best_idx <- which.max(log_data[[log_col]])
+    best_num_top <- log_data$num_top[best_idx]
+    best_log_lik <- log_data[[log_col]][best_idx]
+  } else {
+    best_num_top <- 4
+    best_log_lik <- NA
   }
 
   # 2. Filter Predictions for that Best Model Size
@@ -161,6 +157,7 @@ calculate_prediction_metrics <- function(dataset, mechanism, method, mi_conditio
   alpp_str <- sprintf("%.3f (%.3f)", alpp_mean, if(is.na(alpp_sd)) 0 else alpp_sd)
   
   return(data.frame(
+      model = model,
       dataset = dataset,
       mechanism = mechanism,
       method = method,
@@ -188,14 +185,16 @@ counter <- 1
 
 cat("Processing combinations...\n")
 
-for (d in DATASETS) {
-  for (m in MECHANISMS) {
-    for (meth in METHODS) {
-      for (mi in MI_CONDITIONS) {
-        res <- calculate_prediction_metrics(d, m, meth, mi)
-        if (!is.null(res)) {
-          all_res[[counter]] <- res
-          counter <- counter + 1
+for (mod in MODELS) {
+  for (d in DATASETS) {
+    for (m in MECHANISMS) {
+      for (meth in METHODS) {
+        for (mi in MI_CONDITIONS) {
+          res <- calculate_prediction_metrics(mod, d, m, meth, mi)
+          if (!is.null(res)) {
+            all_res[[counter]] <- res
+            counter <- counter + 1
+          }
         }
       }
     }

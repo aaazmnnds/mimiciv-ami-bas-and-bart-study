@@ -1,72 +1,89 @@
+.libPaths(c("~/R/library", .libPaths()))
+
 # PLOT BETA ESTIMATES
 #
 # Logic:
-# - Visualizes Beta estimates (Mean  SD across 10 folds).
+# - Visualizes Beta estimates (Mean +/- SD across Monte Carlo replications & folds).
 # - Compares "wMI" (With Missing indicators) vs "noMI" (Without).
-# - Uses a single figure per dataset, with subplots for each True Beta value.
+# - Reads true_vars directly from simulation CSV outputs.
+# - Outputs high-resolution comparison plots directly into Submission_v2.0.
 #
 
-library(dplyr)
 library(ggplot2)
 library(gridExtra)
 library(grid)
-
-load("Data/evaluation_config_4VAR.RData")
 
 METHODS <- c("MICE", "MEAN", "missForest", "KNN")
 DATASETS <- c("MIMIC", "MI")
 MECHANISMS <- c("MCAR", "MAR", "MNAR")
 MI_CONDITIONS <- c("wMI", "noMI")
+BETA_TRUE_VALUES <- c(0.1, 0.5, 1.0, 1.5)
+
+output_dir <- "/Users/nazu.ds/Documents/Research Collections/Scientific_Reports_Submission_Package/For resubmission to another journal/Resubmission_Package/Submission_v2.0/"
 
 cat("\n================================================================================\n")
 cat("PLOTTING BETA ESTIMATES (Comparison: wMI vs noMI)\n")
 cat("================================================================================\n\n")
 
-# FUNCTION: Extract Beta Estimates
+# FUNCTION: Extract Beta Estimates for a Single Combination
 
 extract_fold_betas <- function(dataset, mechanism, method, mi_condition) {
   
-  key <- paste0(dataset, "_", mechanism)
-  true_vars <- true_variables[[key]]
-  beta_true_vals <- beta_true_values[[key]]
-  
-  if (is.null(true_vars)) return(NULL)
-  
-  # File name
   if (method == "MICE") {
-    file_name <- paste0("Results/", dataset, "_", mechanism, "_", mi_condition, "_POOLED_beta_estimates.csv")
+    file_name <- paste0("Results/CORRECTED/SIMULATION/", dataset, "_", mechanism, "_MICE_", mi_condition, "_POOLED_beta_estimates.csv")
   } else {
-    file_name <- paste0("Results/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_beta_estimates.csv")
+    file_name <- paste0("Results/CORRECTED/SIMULATION/", dataset, "_", mechanism, "_", method, "_", mi_condition, "_beta_estimates.csv")
   }
   
   if (!file.exists(file_name)) return(NULL)
   
-  beta_data <- read.csv(file_name)
+  beta_data <- read.csv(file_name, stringsAsFactors = FALSE)
   
-  # Normalize column names
-  if (method == "MICE") {
-    beta_estimates <- beta_data %>% filter(variable %in% true_vars) %>% select(fold, variable, beta_hat = beta_pooled)
-  } else {
-    beta_estimates <- beta_data %>% filter(variable %in% true_vars) %>% select(fold, variable, beta_hat)
+  # Filter to 50 Monte Carlo replications if mc_rep exists
+  if ("mc_rep" %in% names(beta_data)) {
+    beta_data <- beta_data[beta_data$mc_rep <= 50, ]
   }
   
-  beta_mapping <- data.frame(variable = true_vars, beta_true = beta_true_vals)
+  if (nrow(beta_data) == 0) return(NULL)
   
-  result <- beta_estimates %>%
-    left_join(beta_mapping, by = "variable") %>%
-    mutate(
-      dataset = dataset,
-      mechanism = mechanism,
-      method = method,
-      mi_condition = mi_condition
-    )
+  # Determine true variables from the true_vars column (using mode across rows)
+  if ("true_vars" %in% names(beta_data)) {
+    mode_str <- names(sort(table(beta_data$true_vars), decreasing = TRUE))[1]
+    true_vars <- trimws(strsplit(mode_str, ",")[[1]])
+  } else {
+    warning(paste("No true_vars column found in", file_name))
+    return(NULL)
+  }
   
-  return(result)
+  # Normalize beta estimate column
+  if (method == "MICE") {
+    beta_data$beta_hat <- beta_data$beta_pooled
+  }
+  
+  # Filter rows for the 4 true variables
+  subset_data <- beta_data[beta_data$variable %in% true_vars, ]
+  if (nrow(subset_data) == 0) return(NULL)
+  
+  # Map true variables to beta true values (1.5, 1.0, 0.5, 0.1) in original order
+  beta_mapping <- data.frame(
+    variable = true_vars,
+    beta_true = c(1.5, 1.0, 0.5, 0.1),
+    stringsAsFactors = FALSE
+  )
+  
+  result <- merge(subset_data, beta_mapping, by = "variable")
+  result$dataset <- dataset
+  result$mechanism <- mechanism
+  result$method <- method
+  result$mi_condition <- mi_condition
+  
+  keep_cols <- c("dataset", "mechanism", "method", "mi_condition", "variable", "beta_true", "beta_hat")
+  return(result[, keep_cols])
 }
 
 # 1. EXTRACT ALL DATA
 
-cat("Extracting data...\n")
+cat("Extracting simulation data...\n")
 all_data_list <- list()
 counter <- 1
 
@@ -75,7 +92,7 @@ for (d in DATASETS) {
     for (meth in METHODS) {
       for (mi in MI_CONDITIONS) {
         res <- extract_fold_betas(d, m, meth, mi)
-        if (!is.null(res)) {
+        if (!is.null(res) && nrow(res) > 0) {
           all_data_list[[counter]] <- res
           counter <- counter + 1
         }
@@ -84,18 +101,32 @@ for (d in DATASETS) {
   }
 }
 
-all_fold_data <- bind_rows(all_data_list)
-cat(sprintf(" Extracted %d estimates.\n\n", nrow(all_fold_data)))
+if (length(all_data_list) == 0) {
+  stop("No simulation data could be extracted. Please check input paths.")
+}
 
-# 2. AGGREGATE (MEAN +/- SD)
+all_fold_data <- do.call(rbind, all_data_list)
+cat(sprintf(" Extracted %d estimates across combinations.\n\n", nrow(all_fold_data)))
 
-plot_data <- all_fold_data %>%
-  group_by(dataset, mechanism, method, mi_condition, beta_true) %>%
-  summarise(
-    mean_beta = mean(beta_hat, na.rm = TRUE),
-    sd_beta = sd(beta_hat, na.rm = TRUE),
-    .groups = "drop"
-  )
+# 2. AGGREGATE (MEAN +/- SD) USING BASE R
+
+plot_data <- aggregate(
+  beta_hat ~ dataset + mechanism + method + mi_condition + beta_true,
+  data = all_fold_data,
+  FUN = function(x) c(mean = mean(x, na.rm = TRUE), sd = sd(x, na.rm = TRUE))
+)
+
+# Unpack matrix columns from aggregate
+plot_data_df <- data.frame(
+  dataset = plot_data$dataset,
+  mechanism = plot_data$mechanism,
+  method = factor(plot_data$method, levels = c("KNN", "MEAN", "MICE", "missForest")),
+  mi_condition = factor(plot_data$mi_condition, levels = c("wMI", "noMI")),
+  beta_true = plot_data$beta_true,
+  mean_beta = plot_data$beta_hat[, "mean"],
+  sd_beta = plot_data$beta_hat[, "sd"],
+  stringsAsFactors = FALSE
+)
 
 # 3. CREATE PLOTS
 
@@ -104,26 +135,26 @@ cat("Creating plots...\n")
 for (ds in DATASETS) {
   cat(sprintf("  Plotting %s...\n", ds))
   
-  ds_data <- plot_data %>% filter(dataset == ds)
+  ds_data <- plot_data_df[plot_data_df$dataset == ds, ]
   beta_values <- sort(unique(ds_data$beta_true))
   
   plots <- list()
   
   for (i in seq_along(beta_values)) {
     beta_val <- beta_values[i]
-    sub_data <- ds_data %>% filter(beta_true == beta_val)
+    sub_data <- ds_data[ds_data$beta_true == beta_val, ]
     
     # Calculate y-limits for better styling
-    y_min <- min(sub_data$mean_beta - sub_data$sd_beta, na.rm=TRUE)
-    y_max <- max(sub_data$mean_beta + sub_data$sd_beta, na.rm=TRUE)
+    y_min <- min(sub_data$mean_beta - sub_data$sd_beta, na.rm = TRUE)
+    y_max <- max(sub_data$mean_beta + sub_data$sd_beta, na.rm = TRUE)
     # Ensure true beta is included
     y_min <- min(y_min, beta_val)
     y_max <- max(y_max, beta_val)
     
     # Add padding
     rng <- y_max - y_min
-    if(rng == 0) rng <- 1
-    y_lims <- c(y_min - 0.1*rng, y_max + 0.1*rng)
+    if (rng == 0) rng <- 1
+    y_lims <- c(y_min - 0.1 * rng, y_max + 0.1 * rng)
 
     p <- ggplot(sub_data, aes(x = method, y = mean_beta, 
                               color = mechanism, shape = mechanism, linetype = mi_condition)) +
@@ -152,28 +183,29 @@ for (ds in DATASETS) {
     plots[[i]] <- p
   }
   
-  # Extract legend from a dummy plot
+  # Extract legend from dummy plot
   dummy_p <- plots[[1]] + theme(legend.position = "right")
-  legend <- cowplot::get_legend(dummy_p) 
-  # If cowplot not installed, use standard grid extraction
-  if(is.null(legend)) {
-      # Fallback manual extraction
-      g <- ggplotGrob(dummy_p)
-      legend <- g$grobs[[which(sapply(g$grobs, function(x) x$name) == "guide-box")]]
+  g <- ggplotGrob(dummy_p)
+  legend_idx <- which(sapply(g$grobs, function(x) x$name) == "guide-box")
+  if (length(legend_idx) > 0) {
+    legend <- g$grobs[[legend_idx]]
+  } else {
+    legend <- NULL
   }
   
-  # Combine
+  # Combine subplots
   combined_plot <- grid.arrange(
     grobs = plots,
     ncol = 2,
-    top = textGrob(paste(ds, "Beta Estimates (Comparing wMI vs noMI)"), gp=gpar(fontsize=20, fontface="bold")),
+    top = textGrob(paste(ifelse(ds == "MIMIC", "MIMIC-IV", "AMI"), "Beta Estimates (Comparing wMI vs noMI)"), 
+                   gp = gpar(fontsize = 20, fontface = "bold")),
     right = legend
   )
   
-  # Filename to match LaTeX: nb_BETA_PLOT_MIMIC_ALL_wMI_vs_noMI.png
-  fname <- paste0("nb_BETA_PLOT_", ds, "_ALL_wMI_vs_noMI.png")
-  ggsave(fname, combined_plot, width = 14, height = 10, bg="white", dpi=300)
+  # Output path matching LaTeX include
+  fname <- file.path(output_dir, paste0("nb_BETA_PLOT_", ds, "_ALL_wMI_vs_noMI.png"))
+  ggsave(fname, combined_plot, width = 14, height = 10, bg = "white", dpi = 300)
+  cat(sprintf("  Saved: %s\n", fname))
 }
 
-cat("Saved plots.\n")
 cat("\nDONE.\n")

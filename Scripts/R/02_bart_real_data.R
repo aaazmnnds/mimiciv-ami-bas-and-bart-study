@@ -113,11 +113,20 @@ evaluate_top_vars_bart <- function(train_data, test_data, y_col, top_vars) {
       R.utils::withTimeout({
         x.train <- as.matrix(x.train)
         x.test <- as.matrix(x.test)
+        mode(x.train) <- "numeric"
+        mode(x.test) <- "numeric"
         x.train[is.na(x.train)] <- 0
         x.test[is.na(x.test)] <- 0
         x.train[!is.finite(x.train)] <- 0
         x.test[!is.finite(x.test)] <- 0
+        y.train <- as.numeric(as.character(y.train))
+        y.train[is.na(y.train) | !is.finite(y.train)] <- 0
+        valid_cols <- apply(x.train, 2, function(col) var(col, na.rm=TRUE) > 1e-10)
+        if (sum(valid_cols) == 0) stop("No valid columns")
+        x.train <- x.train[, valid_cols, drop=FALSE]
+        x.test <- x.test[, valid_cols, drop=FALSE]
         lbart(x.train = x.train, y.train = y.train, x.test = x.test,
+              sparse = FALSE, transposed = FALSE,
               ntree = 100L, ndpost = 100L, nskip = 50L, printevery = 10000L)
       }, timeout = 300, onTimeout = "error")
     }, error=function(e) return(NULL))
@@ -137,11 +146,12 @@ evaluate_top_vars_bart <- function(train_data, test_data, y_col, top_vars) {
     log_probs[k] <- mean(log(true_probs))
   }
   
-  best_k <- which.max(log_probs)
-  if (length(best_k) == 0 || is.na(best_k)) {
+  valid_lp <- which(!is.na(log_probs))
+  if (length(valid_lp) == 0) {
     preds_best <- rep(NA, nrow(test_data))
     best_k <- NA
   } else {
+    best_k <- valid_lp[which.max(log_probs[valid_lp])]
     preds_best <- all_k_preds[[best_k]]
   }
   
@@ -158,6 +168,8 @@ run_analysis <- function() {
     raw_data <- read.csv(cfg$file)
     value_cols <- names(raw_data)[!grepl("_missing|total_missing", names(raw_data))]
     raw_data <- raw_data[, value_cols]
+    # Exclude patient ID columns
+    raw_data <- raw_data[, !names(raw_data) %in% c("HADM_ID", "subject_id", "stay_id"), drop=FALSE]
     
     y_target <- raw_data[[cfg$y_col]]
     
@@ -192,6 +204,13 @@ run_analysis <- function() {
           }
         }
         
+
+        # Permanent skip for computationally infeasible condition
+        if (full_name == "MIMIC_REAL_MICE_wMI") {
+          cat(sprintf("\n--- Permanently skipping %s (lbart memory/timeout infeasible with 96 predictors) ---\n", full_name))
+          next
+        }
+
         cat(sprintf("\n--- Processing %s ---\n", full_name))
         
         df_selected_all <- data.frame()
@@ -312,6 +331,13 @@ run_analysis <- function() {
                   test_imp[is.na(test_imp[[col]]), col] <- c_means[col]
                 }
               }
+              
+              if (method == "MICE") {
+                # Remove constant columns from train_imp and test_imp
+                non_constant <- apply(train_imp, 2, function(col) var(col, na.rm=TRUE) > 1e-10)
+                train_imp <- train_imp[, non_constant, drop=FALSE]
+                test_imp <- test_imp[, non_constant, drop=FALSE]
+              }
 
             } else if (method == "Z_only") {
               # No imputation — missing values remain, only indicators Z are used as predictors
@@ -382,7 +408,7 @@ run_analysis <- function() {
         if (nrow(df_selected_all) > 0) {
            df_sel <- df_selected_all
            if (method == "MICE") {
-               df_sel <- df_sel %>% distinct(fold, variable)
+               df_sel <- df_sel %>% group_by(fold, variable) %>% summarise(rank = mean(rank, na.rm=TRUE), .groups="drop")
                fname <- paste0("Results/CORRECTED/results_BART_", full_name, "_POOLED_selected_variables", output_suffix, ".csv")
            } else {
                fname <- paste0("Results/CORRECTED/results_BART_", full_name, "_selected_variables", output_suffix, ".csv")

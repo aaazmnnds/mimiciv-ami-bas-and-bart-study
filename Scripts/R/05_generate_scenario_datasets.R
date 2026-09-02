@@ -1,3 +1,4 @@
+.libPaths("~/R/library")
 
 library(missMethods)
 library(missForest)
@@ -9,16 +10,16 @@ set.seed(123)
 
 datasets_config <- list(
   MIMIC = list(
-    name = "MIMIC-III",
-    original = "Data/cleaned.mi (mimiciii).csv",
-    missforest = "Data/cleaned.mimic_missForest_imputed.csv",
-    response = "ICD9_CODE",
+    name = "MIMIC-IV Septic Shock",
+    original = "Data/mimic-iv sepsis.csv",
+    missforest = "Data/mimic_iv_Xfull_imputed.csv",
+    response = "hospital_expire_flag",
     output_prefix = "MIMIC"
   ),
   MI = list(
     name = "Myocardial Infarction",
     original = "Data/cleaned.mi (myocardial infarction)_baseline_only.csv",
-    missforest = "Data/cleaned.mi_missForest_imputed_baseline_only.csv",
+    missforest = "Data/mi_Xfull_imputed.csv",
     response = "ZSN",
     output_prefix = "MI"
   )
@@ -167,6 +168,40 @@ for(dataset_name in names(datasets_config)) {
       truth_filename <- paste0("Data/", method, "/", config$output_prefix, "_", mech, "_true_variables.csv")
       write.csv(truth_info, truth_filename, row.names = FALSE)
     }
+  }
+
+  # ALPHA10 SENSITIVITY: Missing indicator signal amplified by factor 10
+  # Beta_X = 0 (predictors have no direct effect)
+  # Beta_Z = c(1.0, 5.0, 10.0, 15.0) (missing indicators drive outcome)
+  BETA_Z_ALPHA10 <- c(1.0, 5.0, 10.0, 15.0)
+
+  cat("  Running ALPHA10 Sensitivity...\n")
+  for (mech in names(models)) {
+    X_missing <- models[[mech]]
+    miss_rates <- colMeans(is.na(X_missing))
+    top_idx <- order(miss_rates, decreasing = TRUE)[1:N_TOP_VARS]
+    top_vars <- names(X_missing)[top_idx]
+    
+    # Create missing indicators for top vars
+    Z_top <- as.data.frame(ifelse(is.na(X_missing[, top_idx]), 1, 0))
+    
+    # Simulate outcome from missing indicators only
+    set.seed(123 + which(names(models) == mech) + 100)
+    sim_res <- simulate_outcome_with_ratio(Z_top, BETA_Z_ALPHA10, target_prop_ones)
+    Y_sim <- sim_res$y
+    
+    complete_data <- data.frame(Y = Y_sim, X_missing)
+    names(complete_data)[1] <- config$response
+    
+    dir.create(file.path("Data", "top"), showWarnings = FALSE)
+    filename <- paste0("Data/top/complete_dataset_", config$output_prefix, "_", mech, "_ALPHA10.csv")
+    write.csv(complete_data, filename, row.names = FALSE)
+    
+    truth_info <- data.frame(variable = top_vars, beta_true = BETA_Z_ALPHA10,
+                             missingness_rate = miss_rates[top_idx])
+    truth_filename <- paste0("Data/top/", config$output_prefix, "_", mech, "_ALPHA10_true_variables.csv")
+    write.csv(truth_info, truth_filename, row.names = FALSE)
+    cat(sprintf("    Saved ALPHA10 dataset: %s\n", filename))
   }
 }
 cat("\nRevised Simulation Complete.\n")
