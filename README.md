@@ -122,8 +122,9 @@ Rscript Scripts/R/14_plot_coefficient_recovery.R
 
 ## Data Availability
 
-- **MIMIC-IV:** Available through PhysioNet (https://physionet.org/content/mimiciv/) following completion of required training and data use agreements.
-- **AMI:** Available through UCI Machine Learning Repository.
+- **MIMIC-IV:** Raw data available through PhysioNet (https://physionet.org/content/mimiciv/) following completion of required training and data use agreements.
+- **AMI (Myocardial Infarction Complications):** Raw data available through UCI Machine Learning Repository (https://archive.ics.uci.edu/dataset/579/myocardial+infarction+complications).
+- Processed datasets used in this study can be requested from the corresponding author (andrade@hiroshima-u.ac.jp).
 
 ## Citation
 
