@@ -1,13 +1,13 @@
-# Analysis of Imputation Methods and Missing Indicators for Bayesian Variable Selection in Clinical Data
+# Imputation Strategies and Missing Indicators for Bayesian Variable Selection in Clinical Data: A Comparative Study of BAS and BART
 
 **Authors:** A. Nads (azmannads@msutawi-tawi.edu.ph), D. Andrade (andrade@hiroshima-u.ac.jp)  
 **License:** MIT License  
 **Repository:** https://github.com/aaazmnnds/mimiciv-ami-bas-and-bart-study  
-**Submission:** Scientific Reports (Round 2 Revision)
+**Submission:** BMC Bioinformatics (under review)
 
 ## Overview
 
-This repository contains the analysis scripts to replicate the findings of the manuscript. The study evaluates four imputation methods (mean imputation, MICE, KNN, missForest) combined with Bayesian variable selection methods (BAS and BART) on two clinical datasets: MIMIC-III (septic shock, 64% missingness) and AMI (chronic heart failure, 4.63% missingness), under three missingness mechanisms (MCAR, MAR, MNAR).
+This repository contains the analysis scripts to replicate the findings of the manuscript. The study evaluates four imputation methods (mean imputation, MICE, KNN, missForest) combined with Bayesian variable selection methods (BAS and BART) on two clinical datasets: MIMIC-IV (septic shock, 24.27% missingness, N=10,990) and AMI (chronic heart failure, 4.63% missingness), under three missingness mechanisms (MCAR, MAR, MNAR).
 
 ## Repository Structure
 Scripts/
@@ -23,6 +23,10 @@ Scripts/
 │   ├── 04_bart_simulation.R         # BART analysis on simulated data
 
 │   ├── 05_generate_scenario_datasets.R  # Generate scenario analysis datasets
+
+│   ├── 05c_run_bas_alpha10.R        # BAS sensitivity analysis with amplified signal
+
+│   ├── 05d_run_bart_alpha10.R       # BART sensitivity analysis with amplified signal
 
 │   ├── 06_impute_scenarios.R        # Impute scenario datasets
 
@@ -46,13 +50,17 @@ Scripts/
 
 │   ├── 16_calculate_correlations.R  # Calculate correlation matrices
 
+│   ├── 17_extract_top_variables.R   # Extract top-ranked variables by PIP and inclusion proportion
+
+│   ├── 18_evaluate_real_data.R      # Evaluate real data models and metrics
+
 │   └── Archive/                     # Deprecated and exploratory scripts
 
 ├── Python/
 
-│   ├── 01_preprocess_mimic.py       # MIMIC-III data preprocessing
+│   ├── 20_plot_all_variables.py     # Plot full variable set performance
 
-│   ├── 02_preprocessing_pipeline.py # General preprocessing pipeline
+│   ├── extract_mimic_iv_sepsis.py   # Extract and preprocess MIMIC-IV sepsis cohort
 
 │   └── Archive/                     # Deprecated scripts
 
@@ -85,13 +93,19 @@ Rscript Scripts/R/06_impute_scenarios.R
 Rscript Scripts/R/07_evaluate_scenarios.R
 ```
 
-### 4. Full Variable Set Analysis
+### 4. Sensitivity Analysis
+```bash
+Rscript Scripts/R/05c_run_bas_alpha10.R
+Rscript Scripts/R/05d_run_bart_alpha10.R
+```
+
+### 5. Full Variable Set Analysis
 ```bash
 Rscript Scripts/R/08_bas_all_variables.R
 Rscript Scripts/R/09_bart_all_variables.R
 ```
 
-### 5. Evaluation and Plotting
+### 6. Evaluation and Plotting
 ```bash
 Rscript Scripts/R/10_evaluate_predictions.R
 Rscript Scripts/R/12_evaluate_variable_selection.R
@@ -103,19 +117,19 @@ Rscript Scripts/R/14_plot_coefficient_recovery.R
 
 - All preprocessing, imputation, normalization, and model fitting are performed **strictly within each cross-validation fold** using only training data parameters to prevent data leakage.
 - For MICE, test fold imputation uses column means derived from the MICE-imputed training fold.
-- The MIMIC-III dataset requires PhysioNet credentialing: https://physionet.org/content/mimiciii/
+- The MIMIC-IV dataset requires PhysioNet credentialing: https://physionet.org/content/mimiciv/
 - The AMI dataset is the UCI Myocardial Infarction Complications dataset.
 
 ## Data Availability
 
-- **MIMIC-III:** Available through PhysioNet (https://physionet.org/content/mimiciii/) following completion of required training and data use agreements.
+- **MIMIC-IV:** Available through PhysioNet (https://physionet.org/content/mimiciv/) following completion of required training and data use agreements.
 - **AMI:** Available through UCI Machine Learning Repository.
 
 ## Citation
 
 If you use this code, please cite:
 
-> Nads, A., & Andrade, D. (2026). Analysis of Imputation Methods and Missing Indicators for Bayesian Variable Selection in Clinical Data. *Scientific Reports* (under review).
+> Nads, A., & Andrade, D. (2026). Imputation Strategies and Missing Indicators for Bayesian Variable Selection in Clinical Data: A Comparative Study of BAS and BART. BMC Bioinformatics (under review).
 
 ## Contact
 
