@@ -3,7 +3,7 @@
 **Authors:** A. Nads (azmannads@msutawi-tawi.edu.ph), D. Andrade (andrade@hiroshima-u.ac.jp)  
 **License:** MIT License  
 **Repository:** https://github.com/aaazmnnds/mimiciv-ami-bas-and-bart-study  
-**Submission:** BMC Bioinformatics (under review)
+**Submission:** BMC Medical Research Methodology (under review)
 
 ## Overview
 
@@ -130,7 +130,7 @@ Rscript Scripts/R/14_plot_coefficient_recovery.R
 
 If you use this code, please cite:
 
-> Nads, A., & Andrade, D. (2026). Imputation Strategies and Missing Indicators for Bayesian Variable Selection in Clinical Data: A Comparative Study of BAS and BART. BMC Bioinformatics (under review).
+> Nads, A., & Andrade, D. (2026). Imputation Strategies and Missing Indicators for Bayesian Variable Selection in Clinical Data: A Comparative Study of BAS and BART. BMC Medical Research Methodology (under review).
 
 ## Contact
 
