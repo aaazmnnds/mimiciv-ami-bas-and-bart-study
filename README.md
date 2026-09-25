@@ -7,7 +7,7 @@
 
 ## Overview
 
-This repository contains the analysis scripts to replicate the findings of the manuscript. The study evaluates four imputation methods (mean imputation, MICE, KNN, missForest) combined with Bayesian variable selection methods (BAS and BART) on two clinical datasets: MIMIC-IV (septic shock, 24.27% missingness, N=10,990) and AMI (chronic heart failure, 4.63% missingness), under three missingness mechanisms (MCAR, MAR, MNAR).
+This repository contains the analysis scripts to replicate the findings of the manuscript. The study evaluates four imputation methods (mean imputation, MICE, KNN, missForest) combined with Bayesian variable selection methods (BAS and BART) on two clinical datasets: MIMIC-IV (septic shock, 24.27% missingness, N=10,990) and AMI (chronic heart failure, 4.63% missingness, N=1,699), under three missingness mechanisms (MCAR, MAR, MNAR).
 
 ## Repository Structure
 Scripts/
